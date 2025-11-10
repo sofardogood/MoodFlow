@@ -311,12 +311,208 @@
     }
 
     @media (max-width: 600px) {
+      body {
+        padding: 10px;
+      }
+
+      .card {
+        padding: 20px;
+        border-radius: 15px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      h2 {
+        font-size: 18px;
+      }
+
+      h3 {
+        font-size: 16px;
+      }
+
+      h4 {
+        font-size: 14px;
+      }
+
+      .subtitle {
+        font-size: 14px;
+        margin-bottom: 20px;
+      }
+
+      input, textarea, select {
+        font-size: 16px;
+        padding: 14px;
+      }
+
+      button {
+        font-size: 16px;
+        padding: 14px;
+      }
+
       .emoticon-grid {
         grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+
+      .emoticon-btn {
+        padding: 12px 5px;
+        font-size: 24px;
       }
 
       .stats-grid {
         grid-template-columns: 1fr;
+        gap: 10px;
+      }
+
+      .stat-value {
+        font-size: 28px;
+      }
+
+      .stat-label {
+        font-size: 13px;
+      }
+
+      .mood-display {
+        font-size: 40px;
+        margin: 15px 0;
+      }
+
+      .mood-value {
+        font-size: 20px;
+      }
+
+      .data-table {
+        font-size: 12px;
+      }
+
+      .data-table th,
+      .data-table td {
+        padding: 8px 6px;
+      }
+
+      /* AI分析セクションのスマホ対応 */
+      #aiAnalysisContent {
+        padding: 15px !important;
+      }
+
+      #aiAnalysisContent h3 {
+        font-size: 16px !important;
+        margin-bottom: 8px !important;
+      }
+
+      #aiAnalysisContent p,
+      #aiAnalysisContent li {
+        font-size: 14px !important;
+        line-height: 1.5 !important;
+      }
+
+      #aiAnalysisContent ul {
+        padding-left: 0 !important;
+      }
+
+      /* 円グラフのスマホ対応 */
+      #emotionDistributionContainer {
+        padding: 15px !important;
+      }
+
+      #emotionDistributionContainer h3 {
+        font-size: 16px !important;
+        margin-bottom: 10px !important;
+      }
+
+      #emotionDistributionContainer h4 {
+        font-size: 13px !important;
+        margin-bottom: 8px !important;
+      }
+
+      #emotionDistributionContainer canvas {
+        width: 150px !important;
+        height: 150px !important;
+      }
+
+      #emotionDistributionContainer > div > div {
+        flex-direction: column !important;
+        gap: 15px !important;
+      }
+
+      #emotionDistributionContainer > div > div > div {
+        min-width: 150px !important;
+      }
+
+      /* 参加者トレンドのスマホ対応 */
+      #participantInsights {
+        padding: 15px !important;
+      }
+
+      #participantInsights h3 {
+        font-size: 16px !important;
+      }
+
+      #participantTrendsList > div {
+        padding: 10px !important;
+        font-size: 14px !important;
+      }
+
+      #participantTrendsList strong {
+        font-size: 14px !important;
+      }
+
+      #participantTrendsList span {
+        font-size: 12px !important;
+      }
+
+      /* タイムラインのスマホ対応 */
+      #timelineInsights {
+        padding: 15px !important;
+      }
+
+      #timelineInsights h3 {
+        font-size: 16px !important;
+      }
+
+      #timelineChart > div {
+        font-size: 12px !important;
+      }
+
+      #timelineChart span {
+        font-size: 11px !important;
+      }
+
+      /* 円グラフの統計情報 */
+      [id^="pieStats"] {
+        font-size: 11px !important;
+      }
+
+      [id^="pieStats"] span {
+        font-size: 11px !important;
+      }
+
+      /* メッセージ */
+      .message {
+        padding: 12px;
+        font-size: 14px;
+      }
+
+      .loading {
+        padding: 30px 15px;
+        font-size: 14px;
+      }
+
+      .spinner {
+        width: 35px;
+        height: 35px;
+      }
+
+      /* ボタングループ */
+      .nav-buttons {
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .nav-buttons button {
+        width: 100%;
       }
     }
   </style>
@@ -1149,9 +1345,16 @@
       if (!canvas || !data) return;
 
       const ctx = canvas.getContext('2d');
+
+      // スマホ対応: 画面サイズに応じて円グラフのサイズを調整
+      const isMobile = window.innerWidth <= 600;
+      const size = isMobile ? 150 : 200;
+      canvas.width = size;
+      canvas.height = size;
+
       const centerX = canvas.width / 2;
       const centerY = canvas.height / 2;
-      const radius = 80;
+      const radius = isMobile ? 60 : 80;
 
       // データの準備
       const total = data.total;
