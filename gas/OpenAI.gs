@@ -254,3 +254,41 @@ function analyzeTimeline(data) {
 
   return intervals;
 }
+
+/**
+ * 3分割の感情分布を計算
+ */
+function calculateThreeSegmentEmotionDistribution(data) {
+  if (data.length === 0) return [];
+
+  // タイムスタンプでソート
+  const sortedData = data.slice().sort((a, b) =>
+    new Date(a.timestamp) - new Date(b.timestamp)
+  );
+
+  const segmentSize = Math.ceil(sortedData.length / 3);
+
+  const segments = [
+    { name: '序盤', data: sortedData.slice(0, segmentSize) },
+    { name: '中盤', data: sortedData.slice(segmentSize, segmentSize * 2) },
+    { name: '終盤', data: sortedData.slice(segmentSize * 2) }
+  ];
+
+  return segments.map(segment => {
+    const positive = segment.data.filter(d => d.moodScore > 0).length;
+    const neutral = segment.data.filter(d => d.moodScore === 0).length;
+    const negative = segment.data.filter(d => d.moodScore < 0).length;
+    const total = segment.data.length;
+
+    return {
+      name: segment.name,
+      positive: positive,
+      neutral: neutral,
+      negative: negative,
+      total: total,
+      positiveRate: total > 0 ? (positive / total) * 100 : 0,
+      neutralRate: total > 0 ? (neutral / total) * 100 : 0,
+      negativeRate: total > 0 ? (negative / total) * 100 : 0
+    };
+  });
+}

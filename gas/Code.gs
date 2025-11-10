@@ -370,13 +370,17 @@ function startAnalysis(sessionId, token) {
       // タイムライン分析
       const timeline = analyzeTimeline(data);
 
+      // 3分割の感情分布を計算
+      const emotionDistribution = calculateThreeSegmentEmotionDistribution(data);
+
       // 結果をスプレッドシートに保存
       const result = {
         success: true,
         stats: stats,
         analysis: analysis,
         participants: participantAnalyses,
-        timeline: timeline
+        timeline: timeline,
+        emotionDistribution: emotionDistribution
       };
 
       saveAnalysisStatus(sessionId, 'completed', result);

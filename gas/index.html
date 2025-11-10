@@ -472,6 +472,27 @@
             </div>
           </div>
 
+          <div id="emotionDistributionContainer" style="background: #f5f7ff; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+            <h3 style="color: #667eea; margin-bottom: 15px;">📊 時間帯別の感情分布</h3>
+            <div style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: 20px;">
+              <div style="text-align: center; flex: 1; min-width: 200px;">
+                <h4 style="color: #555; margin-bottom: 10px;">序盤</h4>
+                <canvas id="pieChart1" width="200" height="200"></canvas>
+                <div id="pieStats1" style="margin-top: 10px; font-size: 12px; color: #666;"></div>
+              </div>
+              <div style="text-align: center; flex: 1; min-width: 200px;">
+                <h4 style="color: #555; margin-bottom: 10px;">中盤</h4>
+                <canvas id="pieChart2" width="200" height="200"></canvas>
+                <div id="pieStats2" style="margin-top: 10px; font-size: 12px; color: #666;"></div>
+              </div>
+              <div style="text-align: center; flex: 1; min-width: 200px;">
+                <h4 style="color: #555; margin-bottom: 10px;">終盤</h4>
+                <canvas id="pieChart3" width="200" height="200"></canvas>
+                <div id="pieStats3" style="margin-top: 10px; font-size: 12px; color: #666;"></div>
+              </div>
+            </div>
+          </div>
+
           <div id="participantInsights" style="background: #f5f7ff; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
             <h3 style="color: #667eea; margin-bottom: 10px;">👥 参加者別トレンド</h3>
             <div id="participantTrendsList"></div>
@@ -947,6 +968,27 @@
           </div>
         </div>
 
+        <div id="emotionDistributionContainer" style="background: #f5f7ff; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+          <h3 style="color: #667eea; margin-bottom: 15px;">📊 時間帯別の感情分布</h3>
+          <div style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: 20px;">
+            <div style="text-align: center; flex: 1; min-width: 200px;">
+              <h4 style="color: #555; margin-bottom: 10px;">序盤</h4>
+              <canvas id="pieChart1" width="200" height="200"></canvas>
+              <div id="pieStats1" style="margin-top: 10px; font-size: 12px; color: #666;"></div>
+            </div>
+            <div style="text-align: center; flex: 1; min-width: 200px;">
+              <h4 style="color: #555; margin-bottom: 10px;">中盤</h4>
+              <canvas id="pieChart2" width="200" height="200"></canvas>
+              <div id="pieStats2" style="margin-top: 10px; font-size: 12px; color: #666;"></div>
+            </div>
+            <div style="text-align: center; flex: 1; min-width: 200px;">
+              <h4 style="color: #555; margin-bottom: 10px;">終盤</h4>
+              <canvas id="pieChart3" width="200" height="200"></canvas>
+              <div id="pieStats3" style="margin-top: 10px; font-size: 12px; color: #666;"></div>
+            </div>
+          </div>
+        </div>
+
         <div id="participantInsights" style="background: #f5f7ff; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
           <h3 style="color: #667eea; margin-bottom: 10px;">👥 参加者別トレンド</h3>
           <div id="participantTrendsList"></div>
@@ -1059,6 +1101,13 @@
         participantTrends.appendChild(div);
       });
 
+      // 感情分布の円グラフを描画
+      if (result.emotionDistribution && result.emotionDistribution.length === 3) {
+        drawPieChart('pieChart1', 'pieStats1', result.emotionDistribution[0]);
+        drawPieChart('pieChart2', 'pieStats2', result.emotionDistribution[1]);
+        drawPieChart('pieChart3', 'pieStats3', result.emotionDistribution[2]);
+      }
+
       // タイムライン
       const timelineChart = document.getElementById('timelineChart');
       timelineChart.innerHTML = '';
@@ -1090,6 +1139,94 @@
       } else {
         timelineChart.innerHTML = '<p style="color: #999;">データが不足しています</p>';
       }
+    }
+
+    // 円グラフを描画
+    function drawPieChart(canvasId, statsId, data) {
+      const canvas = document.getElementById(canvasId);
+      const statsDiv = document.getElementById(statsId);
+
+      if (!canvas || !data) return;
+
+      const ctx = canvas.getContext('2d');
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const radius = 80;
+
+      // データの準備
+      const total = data.total;
+      const positive = data.positive;
+      const neutral = data.neutral;
+      const negative = data.negative;
+
+      // 割合を計算
+      const positiveAngle = (positive / total) * 2 * Math.PI;
+      const neutralAngle = (neutral / total) * 2 * Math.PI;
+      const negativeAngle = (negative / total) * 2 * Math.PI;
+
+      // 色の定義
+      const positiveColor = '#6bcf7f';
+      const neutralColor = '#ffd93d';
+      const negativeColor = '#ff6b6b';
+
+      // キャンバスをクリア
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // 円グラフを描画
+      let currentAngle = -Math.PI / 2; // 12時の位置から開始
+
+      // ポジティブ
+      if (positive > 0) {
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, radius, currentAngle, currentAngle + positiveAngle);
+        ctx.closePath();
+        ctx.fillStyle = positiveColor;
+        ctx.fill();
+        currentAngle += positiveAngle;
+      }
+
+      // ニュートラル
+      if (neutral > 0) {
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, radius, currentAngle, currentAngle + neutralAngle);
+        ctx.closePath();
+        ctx.fillStyle = neutralColor;
+        ctx.fill();
+        currentAngle += neutralAngle;
+      }
+
+      // ネガティブ
+      if (negative > 0) {
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, radius, currentAngle, currentAngle + negativeAngle);
+        ctx.closePath();
+        ctx.fillStyle = negativeColor;
+        ctx.fill();
+      }
+
+      // 統計情報を表示
+      statsDiv.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 5px;">
+          <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <div style="width: 12px; height: 12px; background: ${positiveColor}; border-radius: 2px;"></div>
+            <span>ポジティブ: ${data.positiveRate.toFixed(1)}%</span>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <div style="width: 12px; height: 12px; background: ${neutralColor}; border-radius: 2px;"></div>
+            <span>ニュートラル: ${data.neutralRate.toFixed(1)}%</span>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <div style="width: 12px; height: 12px; background: ${negativeColor}; border-radius: 2px;"></div>
+            <span>ネガティブ: ${data.negativeRate.toFixed(1)}%</span>
+          </div>
+          <div style="margin-top: 5px; font-weight: 600; color: #333;">
+            合計: ${total}件
+          </div>
+        </div>
+      `;
     }
 
     // 統計情報を表示
