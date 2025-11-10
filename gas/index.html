@@ -875,6 +875,57 @@
       const container = document.getElementById('aiAnalysisContainer');
       container.style.display = 'block';
 
+      // HTML構造を復元（ローディング画面で消えたため）
+      container.innerHTML = `
+        <h2>🤖 AI分析結果</h2>
+        <div id="aiAnalysisContent" style="background: #f5f7ff; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+          <div id="overallMood" style="margin-bottom: 20px;">
+            <h3 style="color: #667eea; margin-bottom: 10px;">📊 全体の雰囲気</h3>
+            <p id="overallMoodText" style="font-size: 16px; line-height: 1.6;"></p>
+          </div>
+
+          <div id="timeProgression" style="margin-bottom: 20px;">
+            <h3 style="color: #667eea; margin-bottom: 10px;">⏰ 時間経過に伴う変化</h3>
+            <p id="timeProgressionText" style="font-size: 16px; line-height: 1.6; background: white; padding: 15px; border-radius: 8px; border-left: 4px solid #667eea;"></p>
+          </div>
+
+          <div id="keyInsights" style="margin-bottom: 20px;">
+            <h3 style="color: #667eea; margin-bottom: 10px;">💡 主なインサイト</h3>
+            <ul id="keyInsightsList" style="list-style: none; padding: 0;"></ul>
+          </div>
+
+          <div id="positiveHighlights" style="margin-bottom: 20px;">
+            <h3 style="color: #667eea; margin-bottom: 10px;">✅ ポジティブな点</h3>
+            <ul id="positiveHighlightsList" style="list-style: none; padding: 0;"></ul>
+          </div>
+
+          <div id="concerns" style="margin-bottom: 20px;">
+            <h3 style="color: #667eea; margin-bottom: 10px;">⚠️ 懸念事項</h3>
+            <ul id="concernsList" style="list-style: none; padding: 0;"></ul>
+          </div>
+
+          <div id="speakerAdvice" style="margin-bottom: 20px;">
+            <h3 style="color: #667eea; margin-bottom: 10px;">🎤 登壇者への具体的アドバイス</h3>
+            <ul id="speakerAdviceList" style="list-style: none; padding: 0;"></ul>
+          </div>
+
+          <div id="recommendations">
+            <h3 style="color: #667eea; margin-bottom: 10px;">🎯 次回に向けた推奨アクション</h3>
+            <ul id="recommendationsList" style="list-style: none; padding: 0;"></ul>
+          </div>
+        </div>
+
+        <div id="participantInsights" style="background: #f5f7ff; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+          <h3 style="color: #667eea; margin-bottom: 10px;">👥 参加者別トレンド</h3>
+          <div id="participantTrendsList"></div>
+        </div>
+
+        <div id="timelineInsights" style="background: #f5f7ff; padding: 20px; border-radius: 10px;">
+          <h3 style="color: #667eea; margin-bottom: 10px;">⏱️ 時間帯別の感情推移</h3>
+          <div id="timelineChart"></div>
+        </div>
+      `;
+
       // 全体の雰囲気
       document.getElementById('overallMoodText').textContent = result.analysis.overallMood;
 
