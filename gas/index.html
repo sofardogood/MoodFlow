@@ -794,7 +794,7 @@
         .getSessionData(sessionId, authToken);
     }
 
-    // AIで分析
+    // AIで分析（バックグラウンド実行 + ポーリング）
     function analyzeWithAI(sessionId, data) {
       const aiContainer = document.getElementById('aiAnalysisContainer');
       aiContainer.style.display = 'block';
@@ -811,7 +811,10 @@
             経過時間: <span id="elapsedSeconds">0</span>秒
           </div>
           <div style="margin-top: 10px; font-size: 13px; color: #999;">
-            GPT-4oによる高度な分析を実行しています
+            GPT-4oによる高度な分析を実行しています（バックグラウンド処理）
+          </div>
+          <div style="margin-top: 15px; font-size: 12px; color: #999;">
+            ※ 分析結果はスプレッドシートに保存されます
           </div>
         </div>
       `;
@@ -825,27 +828,84 @@
         }
       }, 1000);
 
+      // バックグラウンド分析を開始
       google.script.run
         .withSuccessHandler(function(result) {
-          clearInterval(timer);
-          if (result.success) {
-            displayAIAnalysis(result);
+          if (result.success && result.status === 'processing') {
+            // ポーリング開始（3秒ごとに結果を確認）
+            pollAnalysisResult(sessionId, timer, elapsedSeconds);
           } else {
-            aiContainer.innerHTML = `<div class="message error">❌ AI分析エラー: ${result.error}</div>`;
+            clearInterval(timer);
+            aiContainer.innerHTML = `<div class="message error">❌ 分析開始エラー: ${result.error}</div>`;
           }
         })
         .withFailureHandler(function(error) {
           clearInterval(timer);
           aiContainer.innerHTML = `
             <div class="message error" style="background: #fff5f5; padding: 20px; border-radius: 10px; border-left: 4px solid #ff6b6b;">
-              ❌ AI分析失敗: ${error.message}
-              <div style="margin-top: 10px; font-size: 13px;">
-                経過時間: ${elapsedSeconds}秒
-              </div>
+              ❌ 分析開始失敗: ${error.message}
             </div>
           `;
         })
-        .analyzeSessionWithAI(sessionId, data, authToken);
+        .startAnalysis(sessionId, authToken);
+    }
+
+    // 分析結果をポーリング
+    function pollAnalysisResult(sessionId, timer, elapsedSeconds) {
+      const pollInterval = setInterval(() => {
+        google.script.run
+          .withSuccessHandler(function(result) {
+            if (result.status === 'completed') {
+              clearInterval(pollInterval);
+              clearInterval(timer);
+              displayAIAnalysis(result);
+            } else if (result.status === 'error') {
+              clearInterval(pollInterval);
+              clearInterval(timer);
+              const aiContainer = document.getElementById('aiAnalysisContainer');
+              aiContainer.innerHTML = `
+                <div class="message error" style="background: #fff5f5; padding: 20px; border-radius: 10px; border-left: 4px solid #ff6b6b;">
+                  ❌ AI分析エラー: ${result.error}
+                  <div style="margin-top: 10px; font-size: 13px;">
+                    経過時間: ${elapsedSeconds}秒
+                  </div>
+                </div>
+              `;
+            }
+            // status === 'processing' の場合は何もせず、次のポーリングを待つ
+          })
+          .withFailureHandler(function(error) {
+            clearInterval(pollInterval);
+            clearInterval(timer);
+            const aiContainer = document.getElementById('aiAnalysisContainer');
+            aiContainer.innerHTML = `
+              <div class="message error" style="background: #fff5f5; padding: 20px; border-radius: 10px; border-left: 4px solid #ff6b6b;">
+                ❌ 結果取得失敗: ${error.message}
+                <div style="margin-top: 10px; font-size: 13px;">
+                  経過時間: ${elapsedSeconds}秒
+                </div>
+              </div>
+            `;
+          })
+          .getAnalysisResult(sessionId, authToken);
+      }, 3000); // 3秒ごとにポーリング
+
+      // タイムアウト（2分）
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        clearInterval(timer);
+        const aiContainer = document.getElementById('aiAnalysisContainer');
+        if (aiContainer.innerHTML.includes('spinner')) {
+          aiContainer.innerHTML = `
+            <div class="message error" style="background: #fff5f5; padding: 20px; border-radius: 10px; border-left: 4px solid #ff6b6b;">
+              ⏱️ タイムアウト: 分析に時間がかかりすぎています
+              <div style="margin-top: 10px; font-size: 13px;">
+                スプレッドシートの「AnalysisStatus」シートを確認してください
+              </div>
+            </div>
+          `;
+        }
+      }, 120000); // 2分でタイムアウト
     }
 
     // AI分析結果を表示

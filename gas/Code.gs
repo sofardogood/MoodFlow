@@ -319,9 +319,9 @@ function testOpenAIConnection(token) {
 }
 
 /**
- * セッションデータをAIで分析（リアルタイム分析）
+ * セッションデータをAIで分析（バックグラウンド実行）
  */
-function analyzeSessionWithAI(sessionId, data, token) {
+function startAnalysis(sessionId, token) {
   try {
     // 認証チェック
     if (!verifyToken(token)) {
@@ -331,37 +331,226 @@ function analyzeSessionWithAI(sessionId, data, token) {
       };
     }
 
-    if (!data || data.length === 0) {
-      return {
-        success: false,
-        error: 'データがありません'
-      };
+    // データを取得
+    const dataResult = getSessionData(sessionId, token);
+    if (!dataResult.success) {
+      return dataResult;
+    }
+
+    const data = dataResult.data;
+
+    // 分析ステータスを「処理中」に設定
+    saveAnalysisStatus(sessionId, 'processing', null);
+
+    // バックグラウンドで分析を実行（トリガーを使用）
+    const scriptProperties = PropertiesService.getScriptProperties();
+    scriptProperties.setProperty('PENDING_ANALYSIS_SESSION', sessionId);
+
+    // 即座に分析を開始（タイムアウトを避けるため非同期的に実行）
+    ScriptApp.newTrigger('executeBackgroundAnalysis')
+      .timeBased()
+      .after(1000) // 1秒後に実行
+      .create();
+
+    return {
+      success: true,
+      status: 'processing',
+      message: 'AI分析を開始しました。結果を取得するまで数秒お待ちください。'
+    };
+  } catch (error) {
+    console.error('startAnalysis error:', error);
+    return {
+      success: false,
+      error: `分析開始エラー: ${error.message}`
+    };
+  }
+}
+
+/**
+ * バックグラウンドで分析を実行
+ */
+function executeBackgroundAnalysis() {
+  try {
+    const scriptProperties = PropertiesService.getScriptProperties();
+    const sessionId = scriptProperties.getProperty('PENDING_ANALYSIS_SESSION');
+
+    if (!sessionId) {
+      console.log('No pending analysis');
+      return;
+    }
+
+    // 保留中のセッションIDをクリア
+    scriptProperties.deleteProperty('PENDING_ANALYSIS_SESSION');
+
+    // データを取得（認証チェックをスキップ - バックグラウンド実行のため）
+    const config = getProperties();
+    const ss = SpreadsheetApp.openById(config.spreadsheetId);
+    const sheet = ss.getSheetByName('MoodData');
+
+    if (!sheet) {
+      saveAnalysisStatus(sessionId, 'error', { error: 'MoodDataシートが見つかりません' });
+      return;
+    }
+
+    const allData = sheet.getDataRange().getValues();
+    const sessionData = allData.slice(1)
+      .filter(row => row[1] && String(row[1]).trim() === String(sessionId).trim())
+      .map(row => ({
+        timestamp: row[0],
+        sessionId: row[1],
+        nickname: row[2],
+        moodScore: Number(row[3]),
+        emoticon: row[4] || '',
+        comment: row[5] || ''
+      }));
+
+    if (sessionData.length === 0) {
+      saveAnalysisStatus(sessionId, 'error', { error: 'データが見つかりません' });
+      return;
     }
 
     // 統計情報を計算
-    const stats = calculateStats(data);
+    const stats = calculateStats(sessionData);
 
     // AIで分析
-    const analysis = analyzeMeetingData(data, stats);
+    const analysis = analyzeMeetingData(sessionData, stats);
 
     // 参加者別分析
-    const participantAnalyses = analyzeByParticipant(data);
+    const participantAnalyses = analyzeByParticipant(sessionData);
 
     // タイムライン分析
-    const timeline = analyzeTimeline(data);
+    const timeline = analyzeTimeline(sessionData);
 
-    return {
+    // 結果をスプレッドシートに保存
+    const result = {
       success: true,
       stats: stats,
       analysis: analysis,
       participants: participantAnalyses,
       timeline: timeline
     };
+
+    saveAnalysisStatus(sessionId, 'completed', result);
+
+    // トリガーを削除
+    const triggers = ScriptApp.getProjectTriggers();
+    triggers.forEach(trigger => {
+      if (trigger.getHandlerFunction() === 'executeBackgroundAnalysis') {
+        ScriptApp.deleteTrigger(trigger);
+      }
+    });
+
   } catch (error) {
-    console.error('analyzeSessionWithAI error:', error);
+    console.error('executeBackgroundAnalysis error:', error);
+    const sessionId = PropertiesService.getScriptProperties().getProperty('PENDING_ANALYSIS_SESSION');
+    if (sessionId) {
+      saveAnalysisStatus(sessionId, 'error', { error: error.message });
+    }
+  }
+}
+
+/**
+ * 分析ステータスを保存
+ */
+function saveAnalysisStatus(sessionId, status, result) {
+  const config = getProperties();
+  const ss = SpreadsheetApp.openById(config.spreadsheetId);
+  let statusSheet = ss.getSheetByName('AnalysisStatus');
+
+  // シートが存在しない場合は作成
+  if (!statusSheet) {
+    statusSheet = ss.insertSheet('AnalysisStatus');
+    statusSheet.appendRow(['SessionID', 'Status', 'Timestamp', 'Result']);
+  }
+
+  // 既存の行を探す
+  const allData = statusSheet.getDataRange().getValues();
+  let rowIndex = -1;
+  for (let i = 1; i < allData.length; i++) {
+    if (String(allData[i][0]).trim() === String(sessionId).trim()) {
+      rowIndex = i + 1;
+      break;
+    }
+  }
+
+  const timestamp = new Date().toISOString();
+  const resultJson = result ? JSON.stringify(result) : '';
+
+  if (rowIndex > 0) {
+    // 既存の行を更新
+    statusSheet.getRange(rowIndex, 2, 1, 3).setValues([[status, timestamp, resultJson]]);
+  } else {
+    // 新しい行を追加
+    statusSheet.appendRow([sessionId, status, timestamp, resultJson]);
+  }
+}
+
+/**
+ * 分析結果を取得
+ */
+function getAnalysisResult(sessionId, token) {
+  try {
+    // 認証チェック
+    if (!verifyToken(token)) {
+      return {
+        success: false,
+        error: '認証が必要です'
+      };
+    }
+
+    const config = getProperties();
+    const ss = SpreadsheetApp.openById(config.spreadsheetId);
+    const statusSheet = ss.getSheetByName('AnalysisStatus');
+
+    if (!statusSheet) {
+      return {
+        success: false,
+        status: 'not_started',
+        message: '分析が開始されていません'
+      };
+    }
+
+    // セッションIDで検索
+    const allData = statusSheet.getDataRange().getValues();
+    for (let i = 1; i < allData.length; i++) {
+      if (String(allData[i][0]).trim() === String(sessionId).trim()) {
+        const status = allData[i][1];
+        const resultJson = allData[i][3];
+
+        if (status === 'processing') {
+          return {
+            success: true,
+            status: 'processing',
+            message: 'AI分析中...'
+          };
+        } else if (status === 'completed') {
+          const result = JSON.parse(resultJson);
+          return {
+            success: true,
+            status: 'completed',
+            ...result
+          };
+        } else if (status === 'error') {
+          const errorData = JSON.parse(resultJson);
+          return {
+            success: false,
+            status: 'error',
+            error: errorData.error
+          };
+        }
+      }
+    }
+
     return {
       success: false,
-      error: `分析エラー: ${error.message}`
+      status: 'not_started',
+      message: '分析が開始されていません'
+    };
+  } catch (error) {
+    console.error('getAnalysisResult error:', error);
+    return {
+      success: false,
+      error: `結果取得エラー: ${error.message}`
     };
   }
 }
