@@ -420,9 +420,14 @@
         <div class="form-group">
           <label>セッションID</label>
           <input type="text" id="adminSessionId" placeholder="例: meeting-2024-01-15">
+          <div id="sessionIdsHint" style="margin-top: 10px; font-size: 12px; color: #666;"></div>
         </div>
 
         <button onclick="loadSessionData()">データを読み込む</button>
+
+        <button class="secondary-btn" onclick="loadAvailableSessionIds()" style="margin-top: 10px;">
+          📋 利用可能なセッションIDを表示
+        </button>
 
         <div id="statsContainer" style="display: none; margin-top: 30px;">
           <h2>統計情報</h2>
@@ -633,6 +638,35 @@
       showParticipantView();
     }
 
+    // 利用可能なセッションIDを取得
+    function loadAvailableSessionIds() {
+      if (!authToken) {
+        showMessage('adminMessage', '認証が必要です', 'error');
+        return;
+      }
+
+      const hint = document.getElementById('sessionIdsHint');
+      hint.innerHTML = '<div class="loading"><div class="spinner"></div>読み込み中...</div>';
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            if (result.sessionIds.length === 0) {
+              hint.innerHTML = `<div style="color: #ff6b6b;">登録されているセッションはありません（総データ数: ${result.totalRows || 0}行）</div>`;
+            } else {
+              const sessionList = result.sessionIds.map(id => `<strong>${id}</strong>`).join(', ');
+              hint.innerHTML = `<div style="color: #667eea;">利用可能なセッション (${result.sessionIds.length}個): ${sessionList}<br>総データ数: ${result.totalRows}行</div>`;
+            }
+          } else {
+            hint.innerHTML = `<div style="color: #ff6b6b;">エラー: ${result.error}</div>`;
+          }
+        })
+        .withFailureHandler(function(error) {
+          hint.innerHTML = `<div style="color: #ff6b6b;">エラー: ${error.message}</div>`;
+        })
+        .getAllSessionIds(authToken);
+    }
+
     // セッションデータ読み込み
     function loadSessionData() {
       const sessionId = document.getElementById('adminSessionId').value.trim();
@@ -655,25 +689,23 @@
 
           if (result.success) {
             currentSessionData = result.data;
-
-            if (result.data.length === 0) {
-              showMessage('adminMessage', 'データが見つかりませんでした', 'error');
-              document.getElementById('statsContainer').style.display = 'none';
-              document.getElementById('dataContainer').style.display = 'none';
-              return;
-            }
-
             displayStats(result.data);
             displayData(result.data);
 
             document.getElementById('statsContainer').style.display = 'block';
             document.getElementById('dataContainer').style.display = 'block';
+
+            showMessage('adminMessage', `✅ ${result.data.length}件のデータを読み込みました`, 'success');
           } else {
             showMessage('adminMessage', '❌ ' + result.error, 'error');
+            document.getElementById('statsContainer').style.display = 'none';
+            document.getElementById('dataContainer').style.display = 'none';
           }
         })
         .withFailureHandler(function(error) {
           showMessage('adminMessage', '❌ エラー: ' + error.message, 'error');
+          document.getElementById('statsContainer').style.display = 'none';
+          document.getElementById('dataContainer').style.display = 'none';
         })
         .getSessionData(sessionId, authToken);
     }

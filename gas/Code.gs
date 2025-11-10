@@ -133,25 +133,54 @@ function getSessionData(sessionId, token) {
     const sheet = ss.getSheetByName('MoodData');
 
     if (!sheet) {
+      console.log('MoodDataシートが見つかりません');
       return {
-        success: true,
-        data: []
+        success: false,
+        error: 'MoodDataシートが見つかりません。データを送信してシートを作成してください。'
       };
     }
 
-    const data = sheet.getDataRange().getValues();
+    const allData = sheet.getDataRange().getValues();
+    console.log('総行数:', allData.length);
+
+    if (allData.length <= 1) {
+      console.log('データが空です（ヘッダーのみ）');
+      return {
+        success: false,
+        error: 'データがまだ登録されていません。参加者に感情データを送信してもらってください。'
+      };
+    }
 
     // ヘッダー行をスキップして、セッションIDでフィルタ
-    const sessionData = data.slice(1)
-      .filter(row => row[1] === sessionId)
+    const sessionData = allData.slice(1)
+      .filter(row => {
+        // 空行をスキップ
+        if (!row[1]) return false;
+
+        // セッションIDを文字列として比較
+        const rowSessionId = String(row[1]).trim();
+        const targetSessionId = String(sessionId).trim();
+
+        console.log(`比較: "${rowSessionId}" === "${targetSessionId}"`);
+        return rowSessionId === targetSessionId;
+      })
       .map(row => ({
         timestamp: row[0],
         sessionId: row[1],
         nickname: row[2],
-        moodScore: row[3],
-        emoticon: row[4],
-        comment: row[5]
+        moodScore: Number(row[3]),
+        emoticon: row[4] || '',
+        comment: row[5] || ''
       }));
+
+    console.log('フィルタ後のデータ件数:', sessionData.length);
+
+    if (sessionData.length === 0) {
+      return {
+        success: false,
+        error: `セッションID「${sessionId}」のデータが見つかりません。セッションIDを確認してください。`
+      };
+    }
 
     return {
       success: true,
@@ -159,6 +188,62 @@ function getSessionData(sessionId, token) {
     };
   } catch (error) {
     console.error('getSessionData error:', error);
+    return {
+      success: false,
+      error: `エラーが発生しました: ${error.message}`
+    };
+  }
+}
+
+/**
+ * 全セッションIDのリストを取得（デバッグ用）
+ */
+function getAllSessionIds(token) {
+  try {
+    // 認証チェック
+    if (!verifyToken(token)) {
+      return {
+        success: false,
+        error: '認証が必要です'
+      };
+    }
+
+    const config = getProperties();
+    const ss = SpreadsheetApp.openById(config.spreadsheetId);
+    const sheet = ss.getSheetByName('MoodData');
+
+    if (!sheet) {
+      return {
+        success: true,
+        sessionIds: [],
+        message: 'MoodDataシートが見つかりません'
+      };
+    }
+
+    const allData = sheet.getDataRange().getValues();
+
+    if (allData.length <= 1) {
+      return {
+        success: true,
+        sessionIds: [],
+        message: 'データがまだ登録されていません'
+      };
+    }
+
+    // 重複を除いてセッションIDを取得
+    const sessionIds = [...new Set(
+      allData.slice(1)
+        .filter(row => row[1])
+        .map(row => String(row[1]).trim())
+    )];
+
+    return {
+      success: true,
+      sessionIds: sessionIds,
+      totalRows: allData.length - 1
+    };
+  } catch (error) {
+    console.error('getAllSessionIds error:', error);
     return {
       success: false,
       error: error.message

@@ -11,7 +11,7 @@ function createTitleSlide(presentation, sessionId, stats) {
   const shapes = slide.getShapes();
 
   // タイトル
-  shapes[0].getText().setText('🌊 MoodFlow 会議分析レポート');
+  shapes[0].getText().setText('MoodFlow 会議分析レポート');
 
   // サブタイトル
   const subtitle = `Session: ${sessionId}\n総発言数: ${stats.total} | 参加者: ${stats.participants}人\n平均スコア: ${stats.average.toFixed(2)}`;
