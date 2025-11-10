@@ -36,12 +36,15 @@ function analyzeMeetingData(data, stats) {
   const config = getProperties();
 
   // プロンプトを構築
-  const dataText = data.map(d =>
-    `[${d.nickname}] スコア: ${d.moodScore}, コメント: ${d.comment || 'なし'}`
+  // 時系列順にソート
+  const sortedData = data.slice().sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+  const dataText = sortedData.map((d, index) =>
+    `[${index + 1}] ${d.nickname} (${new Date(d.timestamp).toLocaleTimeString('ja-JP')}): スコア ${d.moodScore}, ${d.comment || 'コメントなし'}`
   ).join('\n');
 
-  const prompt = `以下は会議中の参加者の感情スコアとコメントです。
-この会議を分析して、重要なインサイトを抽出してください。
+  const prompt = `以下は会議中の参加者の感情スコアとコメントを時系列順に並べたものです。
+時間経過に伴う感情の変化に注目し、今後の改善点を具体的に提案してください。
 
 # 統計情報
 - 総発言数: ${stats.total}
@@ -50,19 +53,21 @@ function analyzeMeetingData(data, stats) {
 - ポジティブ: ${stats.positive}件 (${stats.positiveRate.toFixed(1)}%)
 - ネガティブ: ${stats.negative}件 (${stats.negativeRate.toFixed(1)}%)
 
-# データ
+# 時系列データ
 ${dataText}
 
 以下のJSON形式で分析結果を返してください：
 {
-  "overallMood": "会議全体の雰囲気を1文で",
-  "keyInsights": ["重要な気づき1", "重要な気づき2", "重要な気づき3"],
-  "positiveHighlights": ["ポジティブな点1", "ポジティブな点2"],
-  "concerns": ["懸念事項1", "懸念事項2"],
-  "recommendations": ["推奨アクション1", "推奨アクション2", "推奨アクション3"]
+  "overallMood": "会議全体の雰囲気を簡潔に（1〜2文）",
+  "timeProgression": "時間経過に伴う感情の変化を具体的に説明（例：序盤は〜、中盤で〜、終盤は〜）",
+  "keyInsights": ["データから読み取れる重要な気づき1", "重要な気づき2", "重要な気づき3"],
+  "positiveHighlights": ["評価すべき点1", "評価すべき点2"],
+  "concerns": ["注意が必要な点1", "注意が必要な点2"],
+  "speakerAdvice": ["登壇者が今後気をつけるべき具体的なポイント1", "ポイント2", "ポイント3"],
+  "recommendations": ["次回の会議に向けた改善提案1", "提案2"]
 }
 
-必ずJSONのみを返してください。余計な説明は不要です。`;
+必ずJSONのみを返してください。`;
 
   try {
     const response = UrlFetchApp.fetch('https://api.openai.com/v1/chat/completions', {
@@ -72,11 +77,11 @@ ${dataText}
         'Content-Type': 'application/json'
       },
       payload: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',
-            content: 'あなたは会議分析の専門家です。データを分析して、有益なインサイトを提供してください。'
+            content: 'あなたは会議分析の専門家です。データを分析して、有益なインサイトを提供してください。時系列での変化と今後の改善点を重視してください。'
           },
           {
             role: 'user',
@@ -84,6 +89,7 @@ ${dataText}
           }
         ],
         temperature: 0.7,
+        max_tokens: 2000,
         response_format: { type: 'json_object' }
       }),
       muteHttpExceptions: true
@@ -111,6 +117,7 @@ ${dataText}
 function getDefaultAnalysis() {
   return {
     overallMood: '会議の雰囲気は概ね良好でした。',
+    timeProgression: '時間経過に伴う感情の変化を確認するには、OpenAI APIの設定が必要です。',
     keyInsights: [
       '参加者の感情スコアが記録されました',
       '会議の進行状況が可視化されました',
@@ -122,6 +129,11 @@ function getDefaultAnalysis() {
     ],
     concerns: [
       'より詳細な分析にはOpenAI APIキーの設定が必要です'
+    ],
+    speakerAdvice: [
+      '参加者の反応を定期的に確認することを推奨します',
+      '感情の変化に注目し、適切なタイミングで休憩を取ることを検討してください',
+      'ネガティブな感情が続く場合は、議論の方向性を見直してください'
     ],
     recommendations: [
       '次回の会議でも同様のフィードバックを収集することを推奨します',

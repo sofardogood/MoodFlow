@@ -281,7 +281,7 @@ function testOpenAIConnection(token) {
         'Content-Type': 'application/json'
       },
       payload: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         messages: [
           {
             role: 'user',

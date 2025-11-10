@@ -441,6 +441,11 @@
               <p id="overallMoodText" style="font-size: 16px; line-height: 1.6;"></p>
             </div>
 
+            <div id="timeProgression" style="margin-bottom: 20px;">
+              <h3 style="color: #667eea; margin-bottom: 10px;">⏰ 時間経過に伴う変化</h3>
+              <p id="timeProgressionText" style="font-size: 16px; line-height: 1.6; background: white; padding: 15px; border-radius: 8px; border-left: 4px solid #667eea;"></p>
+            </div>
+
             <div id="keyInsights" style="margin-bottom: 20px;">
               <h3 style="color: #667eea; margin-bottom: 10px;">💡 主なインサイト</h3>
               <ul id="keyInsightsList" style="list-style: none; padding: 0;"></ul>
@@ -456,8 +461,13 @@
               <ul id="concernsList" style="list-style: none; padding: 0;"></ul>
             </div>
 
+            <div id="speakerAdvice" style="margin-bottom: 20px;">
+              <h3 style="color: #667eea; margin-bottom: 10px;">🎤 登壇者への具体的アドバイス</h3>
+              <ul id="speakerAdviceList" style="list-style: none; padding: 0;"></ul>
+            </div>
+
             <div id="recommendations">
-              <h3 style="color: #667eea; margin-bottom: 10px;">🎯 推奨アクション</h3>
+              <h3 style="color: #667eea; margin-bottom: 10px;">🎯 次回に向けた推奨アクション</h3>
               <ul id="recommendationsList" style="list-style: none; padding: 0;"></ul>
             </div>
           </div>
@@ -788,10 +798,36 @@
     function analyzeWithAI(sessionId, data) {
       const aiContainer = document.getElementById('aiAnalysisContainer');
       aiContainer.style.display = 'block';
-      aiContainer.innerHTML = '<div class="loading"><div class="spinner"></div>AIが分析中...</div>';
+
+      // 経過時間を表示するローディング
+      let elapsedSeconds = 0;
+      aiContainer.innerHTML = `
+        <div class="loading" style="background: #f5f7ff; padding: 30px; border-radius: 10px; text-align: center;">
+          <div class="spinner"></div>
+          <div style="margin-top: 15px; font-size: 18px; font-weight: 600; color: #667eea;">
+            🤖 AIが時系列データを詳細分析中...
+          </div>
+          <div id="elapsedTime" style="margin-top: 10px; font-size: 14px; color: #999;">
+            経過時間: <span id="elapsedSeconds">0</span>秒
+          </div>
+          <div style="margin-top: 10px; font-size: 13px; color: #999;">
+            GPT-4oによる高度な分析を実行しています
+          </div>
+        </div>
+      `;
+
+      // 経過時間カウンター
+      const timer = setInterval(() => {
+        elapsedSeconds++;
+        const secondsEl = document.getElementById('elapsedSeconds');
+        if (secondsEl) {
+          secondsEl.textContent = elapsedSeconds;
+        }
+      }, 1000);
 
       google.script.run
         .withSuccessHandler(function(result) {
+          clearInterval(timer);
           if (result.success) {
             displayAIAnalysis(result);
           } else {
@@ -799,7 +835,15 @@
           }
         })
         .withFailureHandler(function(error) {
-          aiContainer.innerHTML = `<div class="message error">❌ AI分析失敗: ${error.message}</div>`;
+          clearInterval(timer);
+          aiContainer.innerHTML = `
+            <div class="message error" style="background: #fff5f5; padding: 20px; border-radius: 10px; border-left: 4px solid #ff6b6b;">
+              ❌ AI分析失敗: ${error.message}
+              <div style="margin-top: 10px; font-size: 13px;">
+                経過時間: ${elapsedSeconds}秒
+              </div>
+            </div>
+          `;
         })
         .analyzeSessionWithAI(sessionId, data, authToken);
     }
@@ -811,6 +855,9 @@
 
       // 全体の雰囲気
       document.getElementById('overallMoodText').textContent = result.analysis.overallMood;
+
+      // 時間経過に伴う変化
+      document.getElementById('timeProgressionText').textContent = result.analysis.timeProgression || '時系列データを分析中...';
 
       // 主なインサイト
       const insightsList = document.getElementById('keyInsightsList');
@@ -847,6 +894,24 @@
         });
       } else {
         concernsList.innerHTML = '<li style="color: #999;">特に懸念事項はありません</li>';
+      }
+
+      // 登壇者への具体的アドバイス
+      const speakerAdviceList = document.getElementById('speakerAdviceList');
+      speakerAdviceList.innerHTML = '';
+      if (result.analysis.speakerAdvice && result.analysis.speakerAdvice.length > 0) {
+        result.analysis.speakerAdvice.forEach(advice => {
+          const li = document.createElement('li');
+          li.style.padding = '10px';
+          li.style.marginBottom = '8px';
+          li.style.background = 'white';
+          li.style.borderRadius = '6px';
+          li.style.borderLeft = '3px solid #f59e0b';
+          li.innerHTML = `<span style="color: #f59e0b; margin-right: 8px;">💡</span> ${advice}`;
+          speakerAdviceList.appendChild(li);
+        });
+      } else {
+        speakerAdviceList.innerHTML = '<li style="color: #999;">登壇者へのアドバイスを生成中...</li>';
       }
 
       // 推奨アクション
