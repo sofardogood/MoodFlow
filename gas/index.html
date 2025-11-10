@@ -794,10 +794,12 @@
         .getSessionData(sessionId, authToken);
     }
 
-    // AIで分析（同期処理 + キャッシュ）
-    function analyzeWithAI(sessionId, data) {
+    // AIで分析（同期処理 + キャッシュ + 自動リトライ）
+    function analyzeWithAI(sessionId, data, retryCount = 0) {
       const aiContainer = document.getElementById('aiAnalysisContainer');
       aiContainer.style.display = 'block';
+
+      const isRetry = retryCount > 0;
 
       // 経過時間を表示するローディング
       let elapsedSeconds = 0;
@@ -805,16 +807,18 @@
         <div class="loading" style="background: #f5f7ff; padding: 30px; border-radius: 10px; text-align: center;">
           <div class="spinner"></div>
           <div style="margin-top: 15px; font-size: 18px; font-weight: 600; color: #667eea;">
-            🤖 AIが時系列データを詳細分析中...
+            🤖 ${isRetry ? 'キャッシュから分析結果を読み込み中...' : 'AIが時系列データを詳細分析中...'}
           </div>
           <div id="elapsedTime" style="margin-top: 10px; font-size: 14px; color: #999;">
             経過時間: <span id="elapsedSeconds">0</span>秒
           </div>
+          ${!isRetry ? `
           <div style="margin-top: 10px; font-size: 13px; color: #999;">
             GPT-4oによる高度な分析を実行しています
           </div>
+          ` : ''}
           <div style="margin-top: 15px; font-size: 12px; color: #999;">
-            💾 分析結果はスプレッドシートにキャッシュされます
+            💾 ${isRetry ? '(リトライ ' + retryCount + '/3)' : '分析結果はスプレッドシートにキャッシュされます'}
           </div>
         </div>
       `;
@@ -834,10 +838,10 @@
           clearInterval(timer);
           if (result.success && result.status === 'completed') {
             // キャッシュヒットの場合は通知
-            if (result.cached) {
+            if (result.cached || isRetry) {
               const successMsg = document.createElement('div');
               successMsg.style.cssText = 'background: #d1fae5; color: #065f46; padding: 10px; border-radius: 6px; margin-bottom: 15px; text-align: center; font-size: 13px;';
-              successMsg.textContent = '⚡ キャッシュから読み込みました（高速）';
+              successMsg.textContent = isRetry ? '✅ リトライ成功！キャッシュから読み込みました' : '⚡ キャッシュから読み込みました（高速）';
               aiContainer.insertBefore(successMsg, aiContainer.firstChild);
               setTimeout(() => successMsg.remove(), 3000);
             }
@@ -855,17 +859,45 @@
         })
         .withFailureHandler(function(error) {
           clearInterval(timer);
-          aiContainer.innerHTML = `
-            <div class="message error" style="background: #fff5f5; padding: 20px; border-radius: 10px; border-left: 4px solid #ff6b6b;">
-              ❌ 分析失敗: ${error.message}
-              <div style="margin-top: 10px; font-size: 13px;">
-                経過時間: ${elapsedSeconds}秒
+
+          // タイムアウトエラーで、リトライ回数が3回未満なら自動リトライ
+          if (retryCount < 3 && (error.message.includes('timeout') || error.message.includes('タイムアウト') || elapsedSeconds >= 25)) {
+            console.log(`タイムアウト検出、リトライします (${retryCount + 1}/3)`);
+
+            aiContainer.innerHTML = `
+              <div style="background: #fff8dc; padding: 20px; border-radius: 10px; border-left: 4px solid #f59e0b; text-align: center;">
+                ⚠️ 分析に時間がかかっています...<br>
+                <div style="margin-top: 10px; font-size: 14px;">
+                  キャッシュから読み込みを試行中 (${retryCount + 1}/3)
+                </div>
+                <div style="margin-top: 10px; font-size: 12px; color: #666;">
+                  初回分析は完了している可能性があります。少々お待ちください...
+                </div>
               </div>
-              <div style="margin-top: 10px; font-size: 12px;">
-                💡 ヒント: 初回分析には時間がかかります。2回目以降はキャッシュから高速読み込みされます。
+            `;
+
+            // 2秒待ってからリトライ
+            setTimeout(() => {
+              analyzeWithAI(sessionId, data, retryCount + 1);
+            }, 2000);
+          } else {
+            // リトライ上限に達した、またはその他のエラー
+            aiContainer.innerHTML = `
+              <div class="message error" style="background: #fff5f5; padding: 20px; border-radius: 10px; border-left: 4px solid #ff6b6b;">
+                ❌ 分析失敗: ${error.message}
+                <div style="margin-top: 10px; font-size: 13px;">
+                  経過時間: ${elapsedSeconds}秒
+                </div>
+                <div style="margin-top: 15px; font-size: 12px;">
+                  💡 初回分析には最大1分程度かかることがあります。<br>
+                  ページを再読み込みして「データを読み込む」を再実行すると、キャッシュから高速に読み込まれます。
+                </div>
+                <button onclick="loadSessionData()" style="margin-top: 15px; padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                  🔄 再読み込み
+                </button>
               </div>
-            </div>
-          `;
+            `;
+          }
         })
         .startAnalysis(sessionId, authToken);
     }

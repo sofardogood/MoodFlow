@@ -334,6 +334,7 @@ function startAnalysis(sessionId, token) {
     // キャッシュされた結果を確認
     const cachedResult = getCachedAnalysis(sessionId);
     if (cachedResult) {
+      console.log('キャッシュヒット:', sessionId);
       return {
         success: true,
         status: 'completed',
@@ -341,6 +342,8 @@ function startAnalysis(sessionId, token) {
         ...cachedResult
       };
     }
+
+    console.log('キャッシュなし、新規分析開始:', sessionId);
 
     // データを取得
     const dataResult = getSessionData(sessionId, token);
@@ -377,6 +380,7 @@ function startAnalysis(sessionId, token) {
       };
 
       saveAnalysisStatus(sessionId, 'completed', result);
+      console.log('分析完了、キャッシュに保存:', sessionId);
 
       return {
         success: true,
@@ -446,23 +450,42 @@ function getCachedAnalysis(sessionId) {
     const statusSheet = ss.getSheetByName('AnalysisStatus');
 
     if (!statusSheet) {
+      console.log('AnalysisStatusシートが見つかりません');
       return null;
     }
 
     // セッションIDで検索
     const allData = statusSheet.getDataRange().getValues();
+    console.log('AnalysisStatus総行数:', allData.length);
+
     for (let i = 1; i < allData.length; i++) {
-      if (String(allData[i][0]).trim() === String(sessionId).trim()) {
+      const rowSessionId = String(allData[i][0]).trim();
+      const targetSessionId = String(sessionId).trim();
+
+      console.log(`比較: "${rowSessionId}" === "${targetSessionId}"`);
+
+      if (rowSessionId === targetSessionId) {
         const status = allData[i][1];
         const resultJson = allData[i][3];
 
+        console.log(`マッチ発見 - Status: ${status}, JSON長: ${resultJson ? resultJson.length : 0}`);
+
         if (status === 'completed' && resultJson) {
-          const result = JSON.parse(resultJson);
-          return result;
+          try {
+            const result = JSON.parse(resultJson);
+            console.log('キャッシュ解析成功');
+            return result;
+          } catch (parseError) {
+            console.error('JSON解析エラー:', parseError);
+            return null;
+          }
+        } else {
+          console.log(`キャッシュ条件不一致 - status: ${status}, hasJson: ${!!resultJson}`);
         }
       }
     }
 
+    console.log('セッションIDに一致するキャッシュが見つかりません');
     return null;
   } catch (error) {
     console.error('getCachedAnalysis error:', error);
