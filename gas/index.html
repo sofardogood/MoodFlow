@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MoodFlow - 会議感情分析</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: 28px;
+      margin-bottom: 10px;
+      color: #667eea;
+      text-align: center;
+    }
+
+    h2 {
+      font-size: 20px;
+      margin-bottom: 15px;
+      color: #333;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+    }
+
+    .view {
+      display: none;
+    }
+
+    .view.active {
+      display: block;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #555;
+      font-weight: 500;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 16px;
+      transition: border-color 0.3s;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    button {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .secondary-btn {
+      background: white;
+      color: #667eea;
+      border: 2px solid #667eea;
+    }
+
+    .secondary-btn:hover {
+      background: #f5f7ff;
+    }
+
+    .slider-container {
+      margin: 20px 0;
+    }
+
+    .slider {
+      width: 100%;
+      height: 8px;
+      border-radius: 5px;
+      background: linear-gradient(to right, #ff6b6b, #ffd93d, #6bcf7f);
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: white;
+      cursor: pointer;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      border: 3px solid #667eea;
+    }
+
+    .slider::-moz-range-thumb {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: white;
+      cursor: pointer;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      border: 3px solid #667eea;
+    }
+
+    .mood-display {
+      text-align: center;
+      font-size: 48px;
+      margin: 20px 0;
+    }
+
+    .mood-value {
+      text-align: center;
+      font-size: 24px;
+      font-weight: 600;
+      color: #667eea;
+      margin-bottom: 10px;
+    }
+
+    .emoticon-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      margin: 15px 0;
+    }
+
+    .emoticon-btn {
+      width: 100%;
+      padding: 15px 5px;
+      font-size: 28px;
+      background: white;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .emoticon-btn:hover {
+      transform: scale(1.1);
+      border-color: #667eea;
+    }
+
+    .emoticon-btn.selected {
+      background: #667eea;
+      border-color: #667eea;
+      transform: scale(1.1);
+    }
+
+    .history-item {
+      padding: 15px;
+      background: #f5f7ff;
+      border-radius: 10px;
+      margin-bottom: 10px;
+    }
+
+    .history-time {
+      font-size: 12px;
+      color: #999;
+      margin-bottom: 5px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+      margin: 20px 0;
+    }
+
+    .stat-card {
+      background: #f5f7ff;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: #667eea;
+      margin-bottom: 5px;
+    }
+
+    .stat-label {
+      font-size: 14px;
+      color: #666;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 14px;
+    }
+
+    .data-table th,
+    .data-table td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .data-table th {
+      background: #f5f7ff;
+      font-weight: 600;
+      color: #667eea;
+    }
+
+    .message {
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .message.success {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .message.error {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #667eea;
+    }
+
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .nav-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .nav-buttons button {
+      flex: 1;
+    }
+
+    @media (max-width: 600px) {
+      .emoticon-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 参加者入力画面 -->
+    <div id="participantView" class="view active">
+      <div class="card">
+        <h1>🌊 MoodFlow</h1>
+        <p class="subtitle">会議中の感情を記録しましょう</p>
+
+        <div id="participantMessage"></div>
+
+        <div class="form-group">
+          <label>セッションID</label>
+          <input type="text" id="sessionId" placeholder="例: meeting-2024-01-15">
+        </div>
+
+        <div class="form-group">
+          <label>ニックネーム</label>
+          <input type="text" id="nickname" placeholder="例: キリンさん">
+        </div>
+
+        <div class="form-group">
+          <label>今の気分は？</label>
+          <div class="mood-value" id="moodValue">0</div>
+          <div class="slider-container">
+            <input type="range" min="-5" max="5" value="0" class="slider" id="moodSlider">
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px; color: #999;">
+            <span>😢 -5</span>
+            <span>😐 0</span>
+            <span>😊 +5</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>絵文字を選択（オプション）</label>
+          <div class="emoticon-grid" id="emoticonGrid">
+            <button class="emoticon-btn" data-emoticon="😊">😊</button>
+            <button class="emoticon-btn" data-emoticon="😄">😄</button>
+            <button class="emoticon-btn" data-emoticon="😐">😐</button>
+            <button class="emoticon-btn" data-emoticon="😟">😟</button>
+            <button class="emoticon-btn" data-emoticon="😢">😢</button>
+            <button class="emoticon-btn" data-emoticon="👍">👍</button>
+            <button class="emoticon-btn" data-emoticon="❤️">❤️</button>
+            <button class="emoticon-btn" data-emoticon="🤔">🤔</button>
+            <button class="emoticon-btn" data-emoticon="💡">💡</button>
+            <button class="emoticon-btn" data-emoticon="🎉">🎉</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>コメント（オプション）</label>
+          <textarea id="comment" placeholder="今の気持ちや意見を自由に入力してください"></textarea>
+        </div>
+
+        <button onclick="submitMood()" id="submitBtn">送信</button>
+
+        <div class="nav-buttons">
+          <button class="secondary-btn" onclick="showAdminLogin()">管理者ログイン</button>
+        </div>
+
+        <div id="historyContainer" style="margin-top: 30px; display: none;">
+          <h2>送信履歴</h2>
+          <div id="history"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 管理者ログイン画面 -->
+    <div id="loginView" class="view">
+      <div class="card">
+        <h1>🔒 管理者ログイン</h1>
+        <p class="subtitle">パスワードを入力してください</p>
+
+        <div id="loginMessage"></div>
+
+        <div class="form-group">
+          <label>パスワード</label>
+          <input type="password" id="adminPassword" placeholder="管理者パスワード">
+        </div>
+
+        <button onclick="login()">ログイン</button>
+
+        <div class="nav-buttons">
+          <button class="secondary-btn" onclick="showParticipantView()">参加者画面に戻る</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 管理者ダッシュボード -->
+    <div id="adminView" class="view">
+      <div class="card">
+        <h1>📊 管理者ダッシュボード</h1>
+        <p class="subtitle">セッションデータの確認と分析</p>
+
+        <div id="adminMessage"></div>
+
+        <div class="form-group">
+          <label>セッションID</label>
+          <input type="text" id="adminSessionId" placeholder="例: meeting-2024-01-15">
+        </div>
+
+        <button onclick="loadSessionData()">データを読み込む</button>
+
+        <div id="statsContainer" style="display: none; margin-top: 30px;">
+          <h2>統計情報</h2>
+          <div class="stats-grid" id="stats"></div>
+        </div>
+
+        <div id="dataContainer" style="display: none; margin-top: 30px;">
+          <h2>データ一覧</h2>
+          <div style="overflow-x: auto;">
+            <table class="data-table" id="dataTable">
+              <thead>
+                <tr>
+                  <th>時刻</th>
+                  <th>ニックネーム</th>
+                  <th>スコア</th>
+                  <th>絵文字</th>
+                  <th>コメント</th>
+                </tr>
+              </thead>
+              <tbody id="dataBody"></tbody>
+            </table>
+          </div>
+
+          <button onclick="generateSlides()" id="generateBtn" style="margin-top: 20px;">
+            📊 スライドを生成
+          </button>
+        </div>
+
+        <div class="nav-buttons">
+          <button class="secondary-btn" onclick="logout()">ログアウト</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentEmoticon = '';
+    let authToken = '';
+    let currentSessionData = [];
+
+    // ページ読み込み時
+    window.onload = function() {
+      // LocalStorageから値を復元
+      const savedSessionId = localStorage.getItem('moodflow_session_id');
+      const savedNickname = localStorage.getItem('moodflow_nickname');
+
+      if (savedSessionId) document.getElementById('sessionId').value = savedSessionId;
+      if (savedNickname) document.getElementById('nickname').value = savedNickname;
+
+      // スライダーイベント
+      document.getElementById('moodSlider').addEventListener('input', function(e) {
+        document.getElementById('moodValue').textContent = e.target.value;
+      });
+
+      // 絵文字選択
+      document.querySelectorAll('.emoticon-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+          e.preventDefault();
+          document.querySelectorAll('.emoticon-btn').forEach(b => b.classList.remove('selected'));
+          this.classList.add('selected');
+          currentEmoticon = this.dataset.emoticon;
+        });
+      });
+    };
+
+    // 画面切り替え
+    function showView(viewId) {
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.getElementById(viewId).classList.add('active');
+    }
+
+    function showParticipantView() {
+      showView('participantView');
+    }
+
+    function showAdminLogin() {
+      showView('loginView');
+    }
+
+    function showAdminView() {
+      showView('adminView');
+    }
+
+    // メッセージ表示
+    function showMessage(elementId, message, type) {
+      const el = document.getElementById(elementId);
+      el.innerHTML = `<div class="message ${type}">${message}</div>`;
+      setTimeout(() => { el.innerHTML = ''; }, 5000);
+    }
+
+    function showLoading(elementId) {
+      const el = document.getElementById(elementId);
+      el.innerHTML = '<div class="loading"><div class="spinner"></div>処理中...</div>';
+    }
+
+    // 感情データ送信
+    function submitMood() {
+      const sessionId = document.getElementById('sessionId').value.trim();
+      const nickname = document.getElementById('nickname').value.trim();
+      const moodScore = parseInt(document.getElementById('moodSlider').value);
+      const comment = document.getElementById('comment').value.trim();
+
+      if (!sessionId || !nickname) {
+        showMessage('participantMessage', 'セッションIDとニックネームを入力してください', 'error');
+        return;
+      }
+
+      // LocalStorageに保存
+      localStorage.setItem('moodflow_session_id', sessionId);
+      localStorage.setItem('moodflow_nickname', nickname);
+
+      const data = {
+        sessionId: sessionId,
+        nickname: nickname,
+        moodScore: moodScore,
+        comment: comment,
+        emoticon: currentEmoticon
+      };
+
+      showLoading('participantMessage');
+      document.getElementById('submitBtn').disabled = true;
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          document.getElementById('submitBtn').disabled = false;
+
+          if (result.success) {
+            showMessage('participantMessage', '✅ 送信しました！', 'success');
+
+            // フォームをリセット
+            document.getElementById('moodSlider').value = 0;
+            document.getElementById('moodValue').textContent = '0';
+            document.getElementById('comment').value = '';
+            document.querySelectorAll('.emoticon-btn').forEach(b => b.classList.remove('selected'));
+            currentEmoticon = '';
+
+            // 履歴に追加
+            addToHistory(data, result.timestamp);
+          } else {
+            showMessage('participantMessage', '❌ エラー: ' + result.error, 'error');
+          }
+        })
+        .withFailureHandler(function(error) {
+          document.getElementById('submitBtn').disabled = false;
+          showMessage('participantMessage', '❌ エラー: ' + error.message, 'error');
+        })
+        .submitMood(data);
+    }
+
+    // 履歴に追加
+    function addToHistory(data, timestamp) {
+      const historyContainer = document.getElementById('historyContainer');
+      const history = document.getElementById('history');
+
+      historyContainer.style.display = 'block';
+
+      const time = new Date(timestamp).toLocaleTimeString('ja-JP');
+      const item = document.createElement('div');
+      item.className = 'history-item';
+      item.innerHTML = `
+        <div class="history-time">${time}</div>
+        <div><strong>${data.nickname}</strong> - スコア: ${data.moodScore} ${data.emoticon}</div>
+        ${data.comment ? `<div style="margin-top: 5px; color: #666;">${data.comment}</div>` : ''}
+      `;
+
+      history.insertBefore(item, history.firstChild);
+
+      // 最新5件のみ表示
+      while (history.children.length > 5) {
+        history.removeChild(history.lastChild);
+      }
+    }
+
+    // 管理者ログイン
+    function login() {
+      const password = document.getElementById('adminPassword').value;
+
+      if (!password) {
+        showMessage('loginMessage', 'パスワードを入力してください', 'error');
+        return;
+      }
+
+      showLoading('loginMessage');
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            authToken = result.token;
+            showMessage('loginMessage', '✅ ログインしました', 'success');
+            setTimeout(() => {
+              showAdminView();
+              document.getElementById('loginMessage').innerHTML = '';
+            }, 1000);
+          } else {
+            showMessage('loginMessage', '❌ ' + result.error, 'error');
+          }
+        })
+        .withFailureHandler(function(error) {
+          showMessage('loginMessage', '❌ エラー: ' + error.message, 'error');
+        })
+        .adminLogin(password);
+    }
+
+    // ログアウト
+    function logout() {
+      authToken = '';
+      document.getElementById('adminPassword').value = '';
+      showParticipantView();
+    }
+
+    // セッションデータ読み込み
+    function loadSessionData() {
+      const sessionId = document.getElementById('adminSessionId').value.trim();
+
+      if (!sessionId) {
+        showMessage('adminMessage', 'セッションIDを入力してください', 'error');
+        return;
+      }
+
+      if (!authToken) {
+        showMessage('adminMessage', '認証が必要です', 'error');
+        return;
+      }
+
+      showLoading('adminMessage');
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          document.getElementById('adminMessage').innerHTML = '';
+
+          if (result.success) {
+            currentSessionData = result.data;
+
+            if (result.data.length === 0) {
+              showMessage('adminMessage', 'データが見つかりませんでした', 'error');
+              document.getElementById('statsContainer').style.display = 'none';
+              document.getElementById('dataContainer').style.display = 'none';
+              return;
+            }
+
+            displayStats(result.data);
+            displayData(result.data);
+
+            document.getElementById('statsContainer').style.display = 'block';
+            document.getElementById('dataContainer').style.display = 'block';
+          } else {
+            showMessage('adminMessage', '❌ ' + result.error, 'error');
+          }
+        })
+        .withFailureHandler(function(error) {
+          showMessage('adminMessage', '❌ エラー: ' + error.message, 'error');
+        })
+        .getSessionData(sessionId, authToken);
+    }
+
+    // 統計情報を表示
+    function displayStats(data) {
+      const scores = data.map(d => d.moodScore);
+      const total = scores.length;
+      const sum = scores.reduce((a, b) => a + b, 0);
+      const avg = sum / total;
+      const positive = scores.filter(s => s > 0).length;
+      const participants = new Set(data.map(d => d.nickname)).size;
+
+      const statsHtml = `
+        <div class="stat-card">
+          <div class="stat-value">${total}</div>
+          <div class="stat-label">総発言数</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${participants}</div>
+          <div class="stat-label">参加者数</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${avg.toFixed(2)}</div>
+          <div class="stat-label">平均スコア</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${((positive/total)*100).toFixed(1)}%</div>
+          <div class="stat-label">ポジティブ率</div>
+        </div>
+      `;
+
+      document.getElementById('stats').innerHTML = statsHtml;
+    }
+
+    // データ一覧を表示
+    function displayData(data) {
+      const tbody = document.getElementById('dataBody');
+      tbody.innerHTML = '';
+
+      data.forEach(d => {
+        const row = tbody.insertRow();
+        const time = new Date(d.timestamp).toLocaleTimeString('ja-JP');
+
+        row.innerHTML = `
+          <td>${time}</td>
+          <td>${d.nickname}</td>
+          <td>${d.moodScore}</td>
+          <td>${d.emoticon}</td>
+          <td>${d.comment}</td>
+        `;
+      });
+    }
+
+    // スライド生成
+    function generateSlides() {
+      if (currentSessionData.length === 0) {
+        showMessage('adminMessage', 'データを先に読み込んでください', 'error');
+        return;
+      }
+
+      const sessionId = document.getElementById('adminSessionId').value.trim();
+
+      showLoading('adminMessage');
+      document.getElementById('generateBtn').disabled = true;
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          document.getElementById('generateBtn').disabled = false;
+
+          if (result.success) {
+            showMessage('adminMessage',
+              `✅ スライドを生成しました！<br><a href="${result.slideUrl}" target="_blank" style="color: #667eea;">スライドを開く</a>`,
+              'success');
+          } else {
+            showMessage('adminMessage', '❌ ' + result.error, 'error');
+          }
+        })
+        .withFailureHandler(function(error) {
+          document.getElementById('generateBtn').disabled = false;
+          showMessage('adminMessage', '❌ エラー: ' + error.message, 'error');
+        })
+        .generateSlides(sessionId, currentSessionData, authToken);
+    }
+  </script>
+</body>
+</html>
