@@ -300,7 +300,7 @@ function testOpenAIConnection(token) {
       return {
         success: true,
         message: 'OpenAI APIに正常に接続できました！',
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         response: result.choices[0].message.content
       };
     } else {

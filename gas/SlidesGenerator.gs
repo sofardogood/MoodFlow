@@ -32,6 +32,12 @@ function createSummarySlide(presentation, analysis) {
   // 本文
   let content = '全体の雰囲気\n';
   content += analysis.overallMood + '\n\n';
+
+  if (analysis.timeProgression) {
+    content += '⏰ 時間経過に伴う変化\n';
+    content += analysis.timeProgression + '\n\n';
+  }
+
   content += '主なインサイト\n';
   content += analysis.keyInsights.map((insight, i) => `${i + 1}. ${insight}`).join('\n');
 
@@ -132,7 +138,13 @@ function createRecommendationsSlide(presentation, analysis) {
     content += '\n\n';
   }
 
-  content += '🎯 推奨アクション\n';
+  if (analysis.speakerAdvice && analysis.speakerAdvice.length > 0) {
+    content += '🎤 登壇者への具体的アドバイス\n';
+    content += analysis.speakerAdvice.map(a => `• ${a}`).join('\n');
+    content += '\n\n';
+  }
+
+  content += '🎯 次回に向けた推奨アクション\n';
   content += analysis.recommendations.map(r => `• ${r}`).join('\n');
 
   shapes[1].getText().setText(content);
