@@ -429,6 +429,50 @@
           📋 利用可能なセッションIDを表示
         </button>
 
+        <button class="secondary-btn" onclick="testAPIConnection()" style="margin-top: 10px;">
+          🔧 OpenAI API接続テスト
+        </button>
+
+        <div id="aiAnalysisContainer" style="display: none; margin-top: 30px;">
+          <h2>🤖 AI分析結果</h2>
+          <div id="aiAnalysisContent" style="background: #f5f7ff; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+            <div id="overallMood" style="margin-bottom: 20px;">
+              <h3 style="color: #667eea; margin-bottom: 10px;">📊 全体の雰囲気</h3>
+              <p id="overallMoodText" style="font-size: 16px; line-height: 1.6;"></p>
+            </div>
+
+            <div id="keyInsights" style="margin-bottom: 20px;">
+              <h3 style="color: #667eea; margin-bottom: 10px;">💡 主なインサイト</h3>
+              <ul id="keyInsightsList" style="list-style: none; padding: 0;"></ul>
+            </div>
+
+            <div id="positiveHighlights" style="margin-bottom: 20px;">
+              <h3 style="color: #667eea; margin-bottom: 10px;">✅ ポジティブな点</h3>
+              <ul id="positiveHighlightsList" style="list-style: none; padding: 0;"></ul>
+            </div>
+
+            <div id="concerns" style="margin-bottom: 20px;">
+              <h3 style="color: #667eea; margin-bottom: 10px;">⚠️ 懸念事項</h3>
+              <ul id="concernsList" style="list-style: none; padding: 0;"></ul>
+            </div>
+
+            <div id="recommendations">
+              <h3 style="color: #667eea; margin-bottom: 10px;">🎯 推奨アクション</h3>
+              <ul id="recommendationsList" style="list-style: none; padding: 0;"></ul>
+            </div>
+          </div>
+
+          <div id="participantInsights" style="background: #f5f7ff; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+            <h3 style="color: #667eea; margin-bottom: 10px;">👥 参加者別トレンド</h3>
+            <div id="participantTrendsList"></div>
+          </div>
+
+          <div id="timelineInsights" style="background: #f5f7ff; padding: 20px; border-radius: 10px;">
+            <h3 style="color: #667eea; margin-bottom: 10px;">⏱️ 時間帯別の感情推移</h3>
+            <div id="timelineChart"></div>
+          </div>
+        </div>
+
         <div id="statsContainer" style="display: none; margin-top: 30px;">
           <h2>統計情報</h2>
           <div class="stats-grid" id="stats"></div>
@@ -667,6 +711,31 @@
         .getAllSessionIds(authToken);
     }
 
+    // OpenAI API接続テスト
+    function testAPIConnection() {
+      if (!authToken) {
+        showMessage('adminMessage', '認証が必要です', 'error');
+        return;
+      }
+
+      showLoading('adminMessage');
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            showMessage('adminMessage',
+              `✅ ${result.message}<br>モデル: ${result.model}<br>レスポンス: "${result.response}"`,
+              'success');
+          } else {
+            showMessage('adminMessage', `❌ ${result.error}`, 'error');
+          }
+        })
+        .withFailureHandler(function(error) {
+          showMessage('adminMessage', `❌ 接続テスト失敗: ${error.message}`, 'error');
+        })
+        .testOpenAIConnection(authToken);
+    }
+
     // セッションデータ読み込み
     function loadSessionData() {
       const sessionId = document.getElementById('adminSessionId').value.trim();
@@ -696,18 +765,161 @@
             document.getElementById('dataContainer').style.display = 'block';
 
             showMessage('adminMessage', `✅ ${result.data.length}件のデータを読み込みました`, 'success');
+
+            // AI分析を自動実行
+            analyzeWithAI(sessionId, result.data);
           } else {
             showMessage('adminMessage', '❌ ' + result.error, 'error');
             document.getElementById('statsContainer').style.display = 'none';
             document.getElementById('dataContainer').style.display = 'none';
+            document.getElementById('aiAnalysisContainer').style.display = 'none';
           }
         })
         .withFailureHandler(function(error) {
           showMessage('adminMessage', '❌ エラー: ' + error.message, 'error');
           document.getElementById('statsContainer').style.display = 'none';
           document.getElementById('dataContainer').style.display = 'none';
+          document.getElementById('aiAnalysisContainer').style.display = 'none';
         })
         .getSessionData(sessionId, authToken);
+    }
+
+    // AIで分析
+    function analyzeWithAI(sessionId, data) {
+      const aiContainer = document.getElementById('aiAnalysisContainer');
+      aiContainer.style.display = 'block';
+      aiContainer.innerHTML = '<div class="loading"><div class="spinner"></div>AIが分析中...</div>';
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            displayAIAnalysis(result);
+          } else {
+            aiContainer.innerHTML = `<div class="message error">❌ AI分析エラー: ${result.error}</div>`;
+          }
+        })
+        .withFailureHandler(function(error) {
+          aiContainer.innerHTML = `<div class="message error">❌ AI分析失敗: ${error.message}</div>`;
+        })
+        .analyzeSessionWithAI(sessionId, data, authToken);
+    }
+
+    // AI分析結果を表示
+    function displayAIAnalysis(result) {
+      const container = document.getElementById('aiAnalysisContainer');
+      container.style.display = 'block';
+
+      // 全体の雰囲気
+      document.getElementById('overallMoodText').textContent = result.analysis.overallMood;
+
+      // 主なインサイト
+      const insightsList = document.getElementById('keyInsightsList');
+      insightsList.innerHTML = '';
+      result.analysis.keyInsights.forEach(insight => {
+        const li = document.createElement('li');
+        li.style.padding = '8px 0';
+        li.style.borderBottom = '1px solid #e0e0e0';
+        li.innerHTML = `<span style="color: #667eea;">•</span> ${insight}`;
+        insightsList.appendChild(li);
+      });
+
+      // ポジティブな点
+      const positiveList = document.getElementById('positiveHighlightsList');
+      positiveList.innerHTML = '';
+      result.analysis.positiveHighlights.forEach(highlight => {
+        const li = document.createElement('li');
+        li.style.padding = '8px 0';
+        li.style.borderBottom = '1px solid #e0e0e0';
+        li.innerHTML = `<span style="color: #6bcf7f;">✓</span> ${highlight}`;
+        positiveList.appendChild(li);
+      });
+
+      // 懸念事項
+      const concernsList = document.getElementById('concernsList');
+      concernsList.innerHTML = '';
+      if (result.analysis.concerns && result.analysis.concerns.length > 0) {
+        result.analysis.concerns.forEach(concern => {
+          const li = document.createElement('li');
+          li.style.padding = '8px 0';
+          li.style.borderBottom = '1px solid #e0e0e0';
+          li.innerHTML = `<span style="color: #ff6b6b;">⚠</span> ${concern}`;
+          concernsList.appendChild(li);
+        });
+      } else {
+        concernsList.innerHTML = '<li style="color: #999;">特に懸念事項はありません</li>';
+      }
+
+      // 推奨アクション
+      const recommendationsList = document.getElementById('recommendationsList');
+      recommendationsList.innerHTML = '';
+      result.analysis.recommendations.forEach(recommendation => {
+        const li = document.createElement('li');
+        li.style.padding = '8px 0';
+        li.style.borderBottom = '1px solid #e0e0e0';
+        li.innerHTML = `<span style="color: #667eea;">→</span> ${recommendation}`;
+        recommendationsList.appendChild(li);
+      });
+
+      // 参加者別トレンド
+      const participantTrends = document.getElementById('participantTrendsList');
+      participantTrends.innerHTML = '';
+      result.participants.slice(0, 10).forEach(p => {
+        const trendEmoji = p.trend === 'rising' ? '📈' : p.trend === 'falling' ? '📉' : '➡️';
+        const trendColor = p.trend === 'rising' ? '#6bcf7f' : p.trend === 'falling' ? '#ff6b6b' : '#999';
+        const trendText = p.trend === 'rising' ? '上昇傾向' : p.trend === 'falling' ? '下降傾向' : '安定';
+
+        const div = document.createElement('div');
+        div.style.padding = '12px';
+        div.style.marginBottom = '10px';
+        div.style.background = 'white';
+        div.style.borderRadius = '8px';
+        div.style.borderLeft = `4px solid ${trendColor}`;
+        div.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <strong>${p.nickname}</strong>
+              <span style="color: #999; font-size: 14px; margin-left: 10px;">${p.count}件の発言</span>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 20px; font-weight: 700; color: ${trendColor};">${p.averageScore.toFixed(1)}</div>
+              <div style="font-size: 12px; color: ${trendColor};">${trendEmoji} ${trendText}</div>
+            </div>
+          </div>
+        `;
+        participantTrends.appendChild(div);
+      });
+
+      // タイムライン
+      const timelineChart = document.getElementById('timelineChart');
+      timelineChart.innerHTML = '';
+      if (result.timeline.length > 0) {
+        result.timeline.forEach(interval => {
+          const time = new Date(interval.startTime).toLocaleTimeString('ja-JP', {
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+          const score = interval.avgScore;
+          const color = score > 0 ? '#6bcf7f' : score < 0 ? '#ff6b6b' : '#999';
+          const width = Math.abs(score) * 10 + '%';
+
+          const div = document.createElement('div');
+          div.style.marginBottom = '10px';
+          div.innerHTML = `
+            <div style="display: flex; align-items: center; margin-bottom: 5px;">
+              <span style="min-width: 60px; font-size: 12px; color: #666;">${time}</span>
+              <div style="flex: 1; background: #e0e0e0; height: 24px; border-radius: 4px; position: relative; overflow: hidden;">
+                <div style="position: absolute; left: 50%; width: 1px; height: 100%; background: #999;"></div>
+                <div style="position: absolute; ${score > 0 ? 'left: 50%' : 'right: 50%'}; width: ${width}; height: 100%; background: ${color}; transition: width 0.3s;"></div>
+              </div>
+              <span style="min-width: 60px; text-align: right; font-weight: 600; color: ${color};">${score.toFixed(2)}</span>
+            </div>
+            <div style="font-size: 11px; color: #999; margin-left: 60px;">${interval.count}件の発言</div>
+          `;
+          timelineChart.appendChild(div);
+        });
+      } else {
+        timelineChart.innerHTML = '<p style="color: #999;">データが不足しています</p>';
+      }
     }
 
     // 統計情報を表示

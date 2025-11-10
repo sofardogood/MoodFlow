@@ -252,6 +252,121 @@ function getAllSessionIds(token) {
 }
 
 /**
+ * OpenAI API接続テスト
+ */
+function testOpenAIConnection(token) {
+  try {
+    // 認証チェック
+    if (!verifyToken(token)) {
+      return {
+        success: false,
+        error: '認証が必要です'
+      };
+    }
+
+    const config = getProperties();
+
+    if (!config.openaiApiKey) {
+      return {
+        success: false,
+        error: 'OPENAI_API_KEYが設定されていません'
+      };
+    }
+
+    // 簡単なテストリクエストを送信
+    const response = UrlFetchApp.fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'post',
+      headers: {
+        'Authorization': `Bearer ${config.openaiApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      payload: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'user',
+            content: 'Hello! Just testing the connection.'
+          }
+        ],
+        max_tokens: 10
+      }),
+      muteHttpExceptions: true
+    });
+
+    const result = JSON.parse(response.getContentText());
+    const statusCode = response.getResponseCode();
+
+    if (statusCode === 200) {
+      return {
+        success: true,
+        message: 'OpenAI APIに正常に接続できました！',
+        model: 'gpt-4o-mini',
+        response: result.choices[0].message.content
+      };
+    } else {
+      return {
+        success: false,
+        error: `API接続エラー (${statusCode}): ${result.error?.message || '不明なエラー'}`
+      };
+    }
+  } catch (error) {
+    console.error('testOpenAIConnection error:', error);
+    return {
+      success: false,
+      error: `接続テスト失敗: ${error.message}`
+    };
+  }
+}
+
+/**
+ * セッションデータをAIで分析（リアルタイム分析）
+ */
+function analyzeSessionWithAI(sessionId, data, token) {
+  try {
+    // 認証チェック
+    if (!verifyToken(token)) {
+      return {
+        success: false,
+        error: '認証が必要です'
+      };
+    }
+
+    if (!data || data.length === 0) {
+      return {
+        success: false,
+        error: 'データがありません'
+      };
+    }
+
+    // 統計情報を計算
+    const stats = calculateStats(data);
+
+    // AIで分析
+    const analysis = analyzeMeetingData(data, stats);
+
+    // 参加者別分析
+    const participantAnalyses = analyzeByParticipant(data);
+
+    // タイムライン分析
+    const timeline = analyzeTimeline(data);
+
+    return {
+      success: true,
+      stats: stats,
+      analysis: analysis,
+      participants: participantAnalyses,
+      timeline: timeline
+    };
+  } catch (error) {
+    console.error('analyzeSessionWithAI error:', error);
+    return {
+      success: false,
+      error: `分析エラー: ${error.message}`
+    };
+  }
+}
+
+/**
  * Googleスライドを生成
  */
 function generateSlides(sessionId, data, token) {
