@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>MoodFlow - 会議感情分析</title>
   <style>
     * {
@@ -13,41 +13,71 @@
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', sans-serif;
+      padding: 0;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background-size: 100% 80px;
+      background-repeat: no-repeat;
+      background-color: #ffffff;
+      background-attachment: fixed;
       min-height: 100vh;
-      padding: 20px;
     }
 
     .container {
-      max-width: 600px;
+      padding: 0;
+      max-width: 100%;
       margin: 0 auto;
     }
 
     .card {
       background: white;
-      border-radius: 20px;
-      padding: 30px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-      margin-bottom: 20px;
+      padding: 24px 0 80px 0;
+      border-radius: 0;
+      box-shadow: none;
+      margin-bottom: 0;
+      min-height: 100vh;
+    }
+
+    /* キーボード表示時のスクロール対応 */
+    body.keyboard-open .card {
+      min-height: auto;
     }
 
     h1 {
-      font-size: 28px;
-      margin-bottom: 10px;
+      font-size: 40px;
+      line-height: 1.3;
+      margin-bottom: 16px;
+      padding: 0 16px;
       color: #667eea;
       text-align: center;
     }
 
     h2 {
-      font-size: 20px;
-      margin-bottom: 15px;
+      font-size: 30px;
+      line-height: 1.3;
+      margin-bottom: 16px;
+      padding: 0 16px;
       color: #333;
+    }
+
+    h3 {
+      font-size: 24px;
+      line-height: 1.4;
+      padding: 0 16px;
+    }
+
+    h4 {
+      font-size: 22px;
+      line-height: 1.4;
+      padding: 0 16px;
     }
 
     .subtitle {
       text-align: center;
       color: #666;
-      margin-bottom: 30px;
+      font-size: 21px;
+      margin-bottom: 32px;
+      padding: 0 16px;
+      line-height: 1.5;
     }
 
     .view {
@@ -59,22 +89,24 @@
     }
 
     .form-group {
-      margin-bottom: 20px;
+      margin-bottom: 32px;
+      padding: 0 16px;
     }
 
     label {
       display: block;
-      margin-bottom: 8px;
+      font-size: 21px;
+      margin-bottom: 16px;
       color: #555;
-      font-weight: 500;
+      font-weight: 600;
     }
 
     input, textarea, select {
       width: 100%;
-      padding: 12px;
+      font-size: 22px;
+      padding: 18px;
       border: 2px solid #e0e0e0;
-      border-radius: 10px;
-      font-size: 16px;
+      border-radius: 12px;
       transition: border-color 0.3s;
     }
 
@@ -85,18 +117,19 @@
 
     textarea {
       resize: vertical;
-      min-height: 80px;
+      min-height: 144px;
     }
 
     button {
       width: 100%;
-      padding: 15px;
+      font-size: 22px;
+      padding: 28px;
+      min-height: 72px;
+      font-weight: 700;
+      border-radius: 16px;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
       border: none;
-      border-radius: 10px;
-      font-size: 16px;
-      font-weight: 600;
       cursor: pointer;
       transition: transform 0.2s, box-shadow 0.2s;
     }
@@ -115,6 +148,11 @@
       cursor: not-allowed;
     }
 
+    .card > button {
+      margin: 0 16px 16px 16px;
+      width: calc(100% - 32px);
+    }
+
     .secondary-btn {
       background: white;
       color: #667eea;
@@ -126,13 +164,13 @@
     }
 
     .slider-container {
-      margin: 20px 0;
+      margin: 24px 0;
     }
 
     .slider {
       width: 100%;
-      height: 8px;
-      border-radius: 5px;
+      height: 16px;
+      border-radius: 8px;
       background: linear-gradient(to right, #ff6b6b, #ffd93d, #6bcf7f);
       outline: none;
       -webkit-appearance: none;
@@ -141,53 +179,54 @@
     .slider::-webkit-slider-thumb {
       -webkit-appearance: none;
       appearance: none;
-      width: 30px;
-      height: 30px;
+      width: 48px;
+      height: 48px;
       border-radius: 50%;
       background: white;
       cursor: pointer;
       box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-      border: 3px solid #667eea;
+      border: 4px solid #667eea;
     }
 
     .slider::-moz-range-thumb {
-      width: 30px;
-      height: 30px;
+      width: 48px;
+      height: 48px;
       border-radius: 50%;
       background: white;
       cursor: pointer;
       box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-      border: 3px solid #667eea;
+      border: 4px solid #667eea;
     }
 
     .mood-display {
       text-align: center;
-      font-size: 48px;
-      margin: 20px 0;
+      font-size: 72px;
+      margin: 32px 0;
     }
 
     .mood-value {
       text-align: center;
-      font-size: 24px;
-      font-weight: 600;
+      font-size: 40px;
+      margin-bottom: 16px;
+      font-weight: 700;
       color: #667eea;
-      margin-bottom: 10px;
     }
 
     .emoticon-grid {
       display: grid;
       grid-template-columns: repeat(5, 1fr);
-      gap: 10px;
-      margin: 15px 0;
+      gap: 6px;
+      margin: 24px 0;
     }
 
     .emoticon-btn {
       width: 100%;
-      padding: 15px 5px;
-      font-size: 28px;
+      padding: 6px 4px;
+      font-size: 20px;
+      min-height: 32px;
       background: white;
-      border: 2px solid #e0e0e0;
-      border-radius: 10px;
+      border: 3px solid #e0e0e0;
+      border-radius: 16px;
       cursor: pointer;
       transition: all 0.2s;
     }
@@ -203,69 +242,100 @@
       transform: scale(1.1);
     }
 
+    #historyContainer,
+    #history,
+    #aiAnalysisContainer,
+    #emotionDistributionContainer,
+    #participantAnalysisContainer,
+    #timelineContainer,
+    #adminData {
+      padding: 0 16px;
+    }
+
     .history-item {
-      padding: 15px;
+      padding: 24px;
+      margin-bottom: 16px;
+      border-radius: 16px;
       background: #f5f7ff;
-      border-radius: 10px;
-      margin-bottom: 10px;
+    }
+
+    .history-item strong {
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .history-item > div:not(.history-time) {
+      font-size: 19px;
+      line-height: 1.6;
+      margin-top: 8px;
     }
 
     .history-time {
-      font-size: 12px;
+      font-size: 16px;
       color: #999;
-      margin-bottom: 5px;
+      margin-bottom: 8px;
     }
 
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 15px;
-      margin: 20px 0;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      margin: 24px 0;
+      padding: 0 16px;
     }
 
     .stat-card {
       background: #f5f7ff;
-      padding: 20px;
-      border-radius: 10px;
+      padding: 24px;
+      border-radius: 8px;
       text-align: center;
     }
 
     .stat-value {
-      font-size: 32px;
+      font-size: 42px;
       font-weight: 700;
       color: #667eea;
-      margin-bottom: 5px;
+      margin-bottom: 8px;
     }
 
     .stat-label {
-      font-size: 14px;
+      font-size: 17px;
+      line-height: 1.4;
       color: #666;
+    }
+
+    .data-table-wrapper {
+      padding: 0 16px;
     }
 
     .data-table {
       width: 100%;
       border-collapse: collapse;
-      margin: 20px 0;
-      font-size: 14px;
+      margin: 24px 0;
+      font-size: 16px;
     }
 
     .data-table th,
     .data-table td {
-      padding: 12px;
+      padding: 14px 10px;
+      line-height: 1.5;
       text-align: left;
       border-bottom: 1px solid #e0e0e0;
     }
 
     .data-table th {
       background: #f5f7ff;
-      font-weight: 600;
+      font-size: 15px;
+      font-weight: 700;
       color: #667eea;
     }
 
     .message {
-      padding: 15px;
-      border-radius: 10px;
-      margin-bottom: 20px;
+      padding: 18px;
+      margin: 0 16px 24px 16px;
+      font-size: 17px;
+      line-height: 1.6;
+      border-radius: 12px;
       text-align: center;
     }
 
@@ -281,18 +351,26 @@
 
     .loading {
       text-align: center;
-      padding: 40px;
+      padding: 40px 16px;
+      font-size: 17px;
+      line-height: 1.6;
       color: #667eea;
     }
 
+    .loading > div {
+      font-size: 19px !important;
+      line-height: 1.6 !important;
+      font-weight: 600 !important;
+    }
+
     .spinner {
-      border: 4px solid #f3f3f3;
-      border-top: 4px solid #667eea;
+      border: 5px solid #f3f3f3;
+      border-top: 5px solid #667eea;
       border-radius: 50%;
-      width: 40px;
-      height: 40px;
+      width: 44px;
+      height: 44px;
       animation: spin 1s linear infinite;
-      margin: 0 auto 20px;
+      margin: 0 auto 24px;
     }
 
     @keyframes spin {
@@ -302,217 +380,455 @@
 
     .nav-buttons {
       display: flex;
-      gap: 10px;
-      margin-top: 20px;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 24px;
+      padding: 0 16px;
     }
 
     .nav-buttons button {
-      flex: 1;
+      width: 100%;
+      min-height: 56px;
     }
 
-    @media (max-width: 600px) {
-      body {
-        padding: 10px;
+    /* スライダー下の説明文字 */
+    .slider-container + div {
+      font-size: 17px !important;
+      margin-top: 10px !important;
+    }
+
+    /* セッションIDヒント */
+    #sessionIdsHint {
+      font-size: 15px !important;
+    }
+
+    #sessionIdsHint strong {
+      font-size: 16px !important;
+    }
+
+    /* AI分析セクションの最適化 */
+    #aiAnalysisContent {
+      padding: 20px 16px !important;
+    }
+
+    #aiAnalysisContent h3 {
+      font-size: 19px !important;
+      margin-bottom: 12px !important;
+      line-height: 1.4 !important;
+      font-weight: 700 !important;
+    }
+
+    #aiAnalysisContent p,
+    #aiAnalysisContent li {
+      font-size: 18px !important;
+      line-height: 1.7 !important;
+    }
+
+    #aiAnalysisContent ul {
+      padding-left: 0 !important;
+    }
+
+    #aiAnalysisContent li {
+      padding: 12px 0 !important;
+    }
+
+    #aiAnalysisContent > div {
+      margin-bottom: 24px !important;
+    }
+
+    /* 円グラフの最適化 */
+    #emotionDistributionContainer {
+      padding: 20px 16px !important;
+    }
+
+    #emotionDistributionContainer h3 {
+      font-size: 19px !important;
+      margin-bottom: 16px !important;
+      line-height: 1.4 !important;
+      font-weight: 700 !important;
+    }
+
+    #emotionDistributionContainer h4 {
+      font-size: 17px !important;
+      margin-bottom: 12px !important;
+      line-height: 1.4 !important;
+      font-weight: 600 !important;
+    }
+
+    #emotionDistributionContainer canvas {
+      width: 180px !important;
+      height: 180px !important;
+    }
+
+    #emotionDistributionContainer > div > div {
+      flex-direction: column !important;
+      gap: 24px !important;
+    }
+
+    #emotionDistributionContainer > div > div > div {
+      min-width: 180px !important;
+    }
+
+    /* 参加者トレンドの最適化 */
+    #participantInsights {
+      padding: 20px 16px !important;
+    }
+
+    #participantInsights h3 {
+      font-size: 19px !important;
+      line-height: 1.4 !important;
+      font-weight: 700 !important;
+      margin-bottom: 16px !important;
+    }
+
+    #participantTrendsList > div {
+      padding: 16px !important;
+      font-size: 18px !important;
+      line-height: 1.6 !important;
+      margin-bottom: 12px !important;
+    }
+
+    #participantTrendsList strong {
+      font-size: 18px !important;
+    }
+
+    #participantTrendsList span {
+      font-size: 16px !important;
+    }
+
+    #participantTrendsList > div > div > div:first-child {
+      font-size: 18px !important;
+    }
+
+    #participantTrendsList > div > div > div:last-child > div:first-child {
+      font-size: 24px !important;
+    }
+
+    #participantTrendsList > div > div > div:last-child > div:last-child {
+      font-size: 14px !important;
+    }
+
+    /* タイムラインの最適化 */
+    #timelineInsights {
+      padding: 20px 16px !important;
+    }
+
+    #timelineInsights h3 {
+      font-size: 19px !important;
+      line-height: 1.4 !important;
+      font-weight: 700 !important;
+      margin-bottom: 16px !important;
+    }
+
+    #timelineChart > div {
+      font-size: 16px !important;
+      line-height: 1.5 !important;
+      margin-bottom: 12px !important;
+    }
+
+    #timelineChart span {
+      font-size: 15px !important;
+    }
+
+    #timelineChart > div > div:first-child > span:first-child {
+      min-width: 70px !important;
+      font-size: 14px !important;
+    }
+
+    #timelineChart > div > div:first-child > span:last-child {
+      min-width: 70px !important;
+      font-size: 16px !important;
+      font-weight: 700 !important;
+    }
+
+    /* 円グラフの統計情報 */
+    [id^="pieStats"] {
+      font-size: 15px !important;
+      line-height: 1.6 !important;
+    }
+
+    [id^="pieStats"] span {
+      font-size: 15px !important;
+    }
+
+    [id^="pieStats"] > div > div {
+      gap: 8px !important;
+    }
+
+    [id^="pieStats"] > div > div > div {
+      width: 14px !important;
+      height: 14px !important;
+    }
+
+    /* タブレット向け */
+    @media (min-width: 600px) and (max-width: 1024px) {
+      .container {
+        max-width: 90%;
+        margin: 0 auto;
       }
 
       .card {
-        padding: 20px;
-        border-radius: 15px;
+        border-radius: 20px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        margin: 24px auto;
       }
 
       h1 {
-        font-size: 24px;
+        font-size: 42px;
       }
 
       h2 {
-        font-size: 18px;
-      }
-
-      h3 {
-        font-size: 16px;
-      }
-
-      h4 {
-        font-size: 14px;
+        font-size: 32px;
       }
 
       .subtitle {
-        font-size: 14px;
-        margin-bottom: 20px;
+        font-size: 22px;
+      }
+
+      label {
+        font-size: 22px;
       }
 
       input, textarea, select {
-        font-size: 16px;
-        padding: 14px;
+        font-size: 22px;
+        padding: 18px;
       }
 
       button {
-        font-size: 16px;
-        padding: 14px;
-      }
-
-      .emoticon-grid {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 8px;
+        font-size: 22px;
+        padding: 28px;
+        min-height: 72px;
       }
 
       .emoticon-btn {
-        padding: 12px 5px;
         font-size: 24px;
+        padding: 6px 6px;
+        min-height: 32px;
+      }
+
+      .emoticon-grid {
+        grid-template-columns: repeat(5, 1fr);
+        gap: 8px;
+      }
+
+      .form-group {
+        margin-bottom: 40px;
+        padding: 0 24px;
+      }
+
+      .card > button {
+        margin: 0 24px 16px 24px;
+        width: calc(100% - 48px);
+      }
+
+      .nav-buttons {
+        padding: 0 24px;
+        gap: 16px;
       }
 
       .stats-grid {
-        grid-template-columns: 1fr;
-        gap: 10px;
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    /* デスクトップ向け */
+    @media (min-width: 1025px) {
+      .container {
+        max-width: 95%;
+        margin: 0 auto;
       }
 
-      .stat-value {
+      .card {
+        border-radius: 24px;
+        box-shadow: 0 15px 50px rgba(0,0,0,0.15);
+        margin: 32px auto;
+        padding: 32px 0 100px 0;
+      }
+
+      h1 {
+        font-size: 48px;
+        margin-bottom: 20px;
+      }
+
+      h2 {
+        font-size: 36px;
+        margin-bottom: 24px;
+      }
+
+      h3 {
         font-size: 28px;
       }
 
-      .stat-label {
-        font-size: 13px;
+      h4 {
+        font-size: 24px;
       }
 
-      .mood-display {
-        font-size: 40px;
-        margin: 15px 0;
+      .subtitle {
+        font-size: 24px;
+        margin-bottom: 40px;
+      }
+
+      label {
+        font-size: 22px;
+        margin-bottom: 18px;
+      }
+
+      input, textarea, select {
+        font-size: 24px;
+        padding: 20px;
+      }
+
+      button {
+        font-size: 24px;
+        padding: 32px;
+        min-height: 80px;
+      }
+
+      .emoticon-btn {
+        font-size: 32px;
+        padding: 8px 8px;
+        min-height: 40px;
+      }
+
+      .emoticon-grid {
+        grid-template-columns: repeat(5, 1fr);
+        gap: 10px;
+      }
+
+      .form-group {
+        margin-bottom: 48px;
+        padding: 0 32px;
+      }
+
+      .card > button {
+        margin: 0 32px 16px 32px;
+        width: calc(100% - 64px);
+      }
+
+      .nav-buttons {
+        padding: 0 32px;
+        gap: 20px;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 24px;
       }
 
       .mood-value {
-        font-size: 20px;
+        font-size: 80px;
+        margin: 40px 0;
       }
 
-      .data-table {
-        font-size: 12px;
+      .slider-container {
+        margin: 32px 0;
+      }
+
+      .slider {
+        height: 20px;
       }
 
       .data-table th,
       .data-table td {
-        padding: 8px 6px;
+        padding: 18px 14px;
+        font-size: 18px;
       }
 
-      /* AI分析セクションのスマホ対応 */
+      .data-table th {
+        font-size: 18px;
+      }
+
+      .history-item {
+        padding: 28px;
+        margin-bottom: 20px;
+      }
+
+      .history-item strong {
+        font-size: 24px;
+      }
+
+      .history-item > div:not(.history-time) {
+        font-size: 22px;
+      }
+
+      .history-time {
+        font-size: 18px;
+      }
+
+      #historyContainer,
+      #history,
+      #aiAnalysisContainer,
+      #emotionDistributionContainer,
+      #participantAnalysisContainer,
+      #timelineContainer,
+      #adminData {
+        padding: 0 32px;
+      }
+
       #aiAnalysisContent {
-        padding: 15px !important;
+        padding: 24px 32px !important;
       }
 
       #aiAnalysisContent h3 {
-        font-size: 16px !important;
-        margin-bottom: 8px !important;
+        font-size: 24px !important;
       }
 
       #aiAnalysisContent p,
       #aiAnalysisContent li {
-        font-size: 14px !important;
-        line-height: 1.5 !important;
-      }
-
-      #aiAnalysisContent ul {
-        padding-left: 0 !important;
-      }
-
-      /* 円グラフのスマホ対応 */
-      #emotionDistributionContainer {
-        padding: 15px !important;
+        font-size: 20px !important;
       }
 
       #emotionDistributionContainer h3 {
-        font-size: 16px !important;
-        margin-bottom: 10px !important;
+        font-size: 24px !important;
       }
 
       #emotionDistributionContainer h4 {
-        font-size: 13px !important;
-        margin-bottom: 8px !important;
+        font-size: 20px !important;
       }
 
       #emotionDistributionContainer canvas {
-        width: 150px !important;
-        height: 150px !important;
-      }
-
-      #emotionDistributionContainer > div > div {
-        flex-direction: column !important;
-        gap: 15px !important;
-      }
-
-      #emotionDistributionContainer > div > div > div {
-        min-width: 150px !important;
-      }
-
-      /* 参加者トレンドのスマホ対応 */
-      #participantInsights {
-        padding: 15px !important;
+        width: 240px !important;
+        height: 240px !important;
       }
 
       #participantInsights h3 {
-        font-size: 16px !important;
+        font-size: 24px !important;
       }
 
       #participantTrendsList > div {
-        padding: 10px !important;
-        font-size: 14px !important;
-      }
-
-      #participantTrendsList strong {
-        font-size: 14px !important;
-      }
-
-      #participantTrendsList span {
-        font-size: 12px !important;
-      }
-
-      /* タイムラインのスマホ対応 */
-      #timelineInsights {
-        padding: 15px !important;
+        padding: 18px !important;
+        font-size: 20px !important;
       }
 
       #timelineInsights h3 {
-        font-size: 16px !important;
+        font-size: 24px !important;
       }
 
       #timelineChart > div {
-        font-size: 12px !important;
+        font-size: 18px !important;
+      }
+    }
+
+    /* モバイル向けの追加改善 */
+    input, textarea, button {
+      -webkit-tap-highlight-color: rgba(0,0,0,0);
+    }
+
+    @media (max-width: 600px) {
+      input, textarea {
+        font-size: 18px;
+        padding: 14px;
       }
 
-      #timelineChart span {
-        font-size: 11px !important;
+      .emoticon-btn {
+        font-size: 36px;
+        padding: 18px 12px;
+        min-height: 64px;
       }
 
-      /* 円グラフの統計情報 */
-      [id^="pieStats"] {
-        font-size: 11px !important;
-      }
-
-      [id^="pieStats"] span {
-        font-size: 11px !important;
-      }
-
-      /* メッセージ */
-      .message {
-        padding: 12px;
-        font-size: 14px;
-      }
-
-      .loading {
-        padding: 30px 15px;
-        font-size: 14px;
-      }
-
-      .spinner {
-        width: 35px;
-        height: 35px;
-      }
-
-      /* ボタングループ */
-      .nav-buttons {
-        flex-direction: column;
-        gap: 8px;
-      }
-
-      .nav-buttons button {
-        width: 100%;
+      /* キーボードで入力欄が隠れにくくする */
+      input:focus, textarea:focus {
+        scroll-margin-bottom: 220px;
       }
     }
   </style>
@@ -571,10 +887,16 @@
           <textarea id="comment" placeholder="今の気持ちや意見を自由に入力してください"></textarea>
         </div>
 
+        <div class="form-group">
+          <label>発表者への質問（オプション）</label>
+          <textarea id="question" placeholder="発表者に質問があればここに入力してください（例：なぜ地球は丸いのですか？）"></textarea>
+        </div>
+
         <button onclick="submitMood()" id="submitBtn">送信</button>
 
         <div class="nav-buttons">
           <button class="secondary-btn" onclick="showAdminLogin()">管理者ログイン</button>
+          <button class="secondary-btn" onclick="showFAQ()" style="background: #667eea; color: white; border: 2px solid #667eea;">❓ よくある質問</button>
         </div>
 
         <div id="historyContainer" style="margin-top: 30px; display: none;">
@@ -727,8 +1049,126 @@
           </button>
         </div>
 
+        <div id="questionsContainer" style="display: none; margin-top: 30px;">
+          <h2>❓ 参加者からの質問一覧</h2>
+          <div style="background: #f5f7ff; padding: 20px; border-radius: 10px;">
+            <div id="questionsList"></div>
+            <div id="noQuestionsMessage" style="text-align: center; color: #999; padding: 20px;">
+              質問がまだ投稿されていません
+            </div>
+          </div>
+
+          <button onclick="downloadQuestions()" class="secondary-btn" style="margin-top: 20px; background: #6bcf7f; color: white; border: 2px solid #6bcf7f;">
+            📥 質問をCSVダウンロード
+          </button>
+        </div>
+
         <div class="nav-buttons">
           <button class="secondary-btn" onclick="logout()">ログアウト</button>
+          <button class="secondary-btn" onclick="showFAQ()" style="background: #667eea; color: white; border: 2px solid #667eea;">❓ よくある質問</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- FAQセクション -->
+    <div id="faqView" class="view">
+      <div class="card">
+        <h1>❓ よくある質問</h1>
+        <p class="subtitle">MoodFlowの使い方についてのご質問</p>
+
+        <div class="form-group">
+          <h2>📱 機能・デザイン関連</h2>
+          
+          <div style="background: #f5f7ff; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+            <h3 style="color: #667eea; margin-bottom: 10px;">Q1: モバイル対応について</h3>
+            <p style="margin: 10px 0; color: #555;">キーボードが表示される時に画面がどのように動作しますか？</p>
+            <p style="margin: 10px 0; color: #555;">タブレットとデスクトップでの表示は最適化されていますか？</p>
+          </div>
+
+          <div style="background: #f5f7ff; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+            <h3 style="color: #667eea; margin-bottom: 10px;">Q2: 気分スコア・絵文字選択</h3>
+            <p style="margin: 10px 0; color: #555;">スライダーの -5 から +5 の範囲は調整可能ですか？</p>
+            <p style="margin: 10px 0; color: #555;">絵文字の種類を追加・変更したいのですが、どこで変更しますか？</p>
+            <p style="margin: 10px 0; color: #555;">絵文字選択を必須にするか、オプションのままにするか変更できますか？</p>
+          </div>
+
+          <div style="background: #f5f7ff; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+            <h3 style="color: #667eea; margin-bottom: 10px;">Q3: 送信履歴の表示</h3>
+            <p style="margin: 10px 0; color: #555;">履歴は何件まで表示されますか？表示件数を変更できますか？</p>
+            <p style="margin: 10px 0; color: #555;">過去の送信履歴を全件確認する方法はありますか？</p>
+          </div>
+
+          <div style="background: #f5f7ff; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+            <h3 style="color: #667eea; margin-bottom: 10px;">Q4: 色とテーマ</h3>
+            <p style="margin: 10px 0; color: #555;">グラデーション色（紫）を別の色に変更したい場合、どこを編集しますか？</p>
+            <p style="margin: 10px 0; color: #555;">ダークモードに対応していますか？</p>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <h2>🔐 管理者機能関連</h2>
+
+          <div style="background: #f5f7ff; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+            <h3 style="color: #667eea; margin-bottom: 10px;">Q5: ログイン・認証</h3>
+            <p style="margin: 10px 0; color: #555;">管理者パスワードはどこで設定されていますか？</p>
+            <p style="margin: 10px 0; color: #555;">複数のパスワード対応はできますか？</p>
+          </div>
+
+          <div style="background: #f5f7ff; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+            <h3 style="color: #667eea; margin-bottom: 10px;">Q6: セッションID管理</h3>
+            <p style="margin: 10px 0; color: #555;">セッションIDの命名ルールはありますか？推奨形式は？</p>
+            <p style="margin: 10px 0; color: #555;">既存のセッションデータを削除することはできますか？</p>
+          </div>
+
+          <div style="background: #f5f7ff; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+            <h3 style="color: #667eea; margin-bottom: 10px;">Q7: AI分析機能</h3>
+            <p style="margin: 10px 0; color: #555;">初回分析に1分かかるのは仕様ですか？高速化できますか？</p>
+            <p style="margin: 10px 0; color: #555;">分析結果はいつまでキャッシュされますか？</p>
+            <p style="margin: 10px 0; color: #555;">GPT-4o以外のモデルを使用できますか？</p>
+          </div>
+
+          <div style="background: #f5f7ff; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+            <h3 style="color: #667eea; margin-bottom: 10px;">Q8: データ一覧・統計</h3>
+            <p style="margin: 10px 0; color: #555;">データ一覧をCSVやExcelでエクスポートできますか？</p>
+            <p style="margin: 10px 0; color: #555;">グラフの時間帯分割（序盤・中盤・終盤）の時間は調整できますか？</p>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <h2>📊 スライド生成関連</h2>
+
+          <div style="background: #f5f7ff; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+            <h3 style="color: #667eea; margin-bottom: 10px;">Q9: スライド機能</h3>
+            <p style="margin: 10px 0; color: #555;">生成されたスライドのテンプレートはカスタマイズできますか？</p>
+            <p style="margin: 10px 0; color: #555;">スライドにロゴやブランドカラーを反映できますか？</p>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <h2>🔧 その他・トラブルシューティング</h2>
+
+          <div style="background: #f5f7ff; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+            <h3 style="color: #667eea; margin-bottom: 10px;">Q10: エラー処理</h3>
+            <p style="margin: 10px 0; color: #555;">「タイムアウトエラー」が出た場合、どう対応すればいいですか？</p>
+            <p style="margin: 10px 0; color: #555;">3回のリトライで失敗した場合、どうすればいいですか？</p>
+          </div>
+
+          <div style="background: #f5f7ff; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+            <h3 style="color: #667eea; margin-bottom: 10px;">Q11: パフォーマンス</h3>
+            <p style="margin: 10px 0; color: #555;">大量のデータ（1000件以上）を処理できますか？</p>
+            <p style="margin: 10px 0; color: #555;">複数のセッションを同時に管理できますか？</p>
+          </div>
+
+          <div style="background: #f5f7ff; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+            <h3 style="color: #667eea; margin-bottom: 10px;">Q12: データ保存</h3>
+            <p style="margin: 10px 0; color: #555;">ローカルストレージに保存されるデータ（セッションID、ニックネーム）は、いつ削除されますか？</p>
+            <p style="margin: 10px 0; color: #555;">セッションデータはスプレッドシートのどこに保存されていますか？</p>
+          </div>
+        </div>
+
+        <div class="nav-buttons">
+          <button class="secondary-btn" onclick="showParticipantView()">参加者画面に戻る</button>
+          <button class="secondary-btn" onclick="showAdminLogin()">管理者ログイン</button>
         </div>
       </div>
     </div>
@@ -762,6 +1202,39 @@
           currentEmoticon = this.dataset.emoticon;
         });
       });
+
+      // モバイルキーボード検出（スマホでキーボードが表示された時にスクロール可能にする）
+      const inputs = document.querySelectorAll('input, textarea');
+      let initialViewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+
+      // 入力欄フォーカス時
+      inputs.forEach(input => {
+        input.addEventListener('focus', function() {
+          // モバイルデバイスのみ（画面幅が600px以下）
+          if (window.innerWidth <= 600) {
+            document.body.classList.add('keyboard-open');
+          }
+        });
+
+        input.addEventListener('blur', function() {
+          document.body.classList.remove('keyboard-open');
+        });
+      });
+
+      // viewport変化検出（より確実なキーボード検出）
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', function() {
+          if (window.innerWidth <= 600) {
+            const currentHeight = window.visualViewport.height;
+            // viewportが縮小した場合（キーボードが表示された）
+            if (currentHeight < initialViewportHeight * 0.75) {
+              document.body.classList.add('keyboard-open');
+            } else {
+              document.body.classList.remove('keyboard-open');
+            }
+          }
+        });
+      }
     };
 
     // 画面切り替え
@@ -782,6 +1255,10 @@
       showView('adminView');
     }
 
+    function showFAQ() {
+      showView('faqView');
+    }
+
     // メッセージ表示
     function showMessage(elementId, message, type) {
       const el = document.getElementById(elementId);
@@ -800,6 +1277,7 @@
       const nickname = document.getElementById('nickname').value.trim();
       const moodScore = parseInt(document.getElementById('moodSlider').value);
       const comment = document.getElementById('comment').value.trim();
+      const question = document.getElementById('question').value.trim();
 
       if (!sessionId || !nickname) {
         showMessage('participantMessage', 'セッションIDとニックネームを入力してください', 'error');
@@ -815,7 +1293,8 @@
         nickname: nickname,
         moodScore: moodScore,
         comment: comment,
-        emoticon: currentEmoticon
+        emoticon: currentEmoticon,
+        question: question
       };
 
       showLoading('participantMessage');
@@ -832,6 +1311,7 @@
             document.getElementById('moodSlider').value = 0;
             document.getElementById('moodValue').textContent = '0';
             document.getElementById('comment').value = '';
+            document.getElementById('question').value = '';
             document.querySelectorAll('.emoticon-btn').forEach(b => b.classList.remove('selected'));
             currentEmoticon = '';
 
@@ -987,9 +1467,11 @@
             currentSessionData = result.data;
             displayStats(result.data);
             displayData(result.data);
+            displayQuestions(result.data);
 
             document.getElementById('statsContainer').style.display = 'block';
             document.getElementById('dataContainer').style.display = 'block';
+            document.getElementById('questionsContainer').style.display = 'block';
 
             showMessage('adminMessage', `✅ ${result.data.length}件のデータを読み込みました`, 'success');
 
@@ -999,6 +1481,7 @@
             showMessage('adminMessage', '❌ ' + result.error, 'error');
             document.getElementById('statsContainer').style.display = 'none';
             document.getElementById('dataContainer').style.display = 'none';
+            document.getElementById('questionsContainer').style.display = 'none';
             document.getElementById('aiAnalysisContainer').style.display = 'none';
           }
         })
@@ -1006,6 +1489,7 @@
           showMessage('adminMessage', '❌ エラー: ' + error.message, 'error');
           document.getElementById('statsContainer').style.display = 'none';
           document.getElementById('dataContainer').style.display = 'none';
+          document.getElementById('questionsContainer').style.display = 'none';
           document.getElementById('aiAnalysisContainer').style.display = 'none';
         })
         .getSessionData(sessionId, authToken);
@@ -1348,13 +1832,13 @@
 
       // スマホ対応: 画面サイズに応じて円グラフのサイズを調整
       const isMobile = window.innerWidth <= 600;
-      const size = isMobile ? 150 : 200;
+      const size = isMobile ? 180 : 200;
       canvas.width = size;
       canvas.height = size;
 
       const centerX = canvas.width / 2;
       const centerY = canvas.height / 2;
-      const radius = isMobile ? 60 : 80;
+      const radius = isMobile ? 72 : 80;
 
       // データの準備
       const total = data.total;
@@ -1480,6 +1964,79 @@
           <td>${d.comment}</td>
         `;
       });
+    }
+
+    // 質問を表示
+    function displayQuestions(data) {
+      const questionsList = document.getElementById('questionsList');
+      const noQuestionsMessage = document.getElementById('noQuestionsMessage');
+      
+      // 質問のみをフィルタリング
+      const questions = data.filter(d => d.question && d.question.trim());
+
+      questionsList.innerHTML = '';
+
+      if (questions.length === 0) {
+        noQuestionsMessage.style.display = 'block';
+      } else {
+        noQuestionsMessage.style.display = 'none';
+        questions.forEach((q, index) => {
+          const time = new Date(q.timestamp).toLocaleTimeString('ja-JP');
+          const div = document.createElement('div');
+          div.style.cssText = 'background: white; padding: 16px; margin-bottom: 12px; border-radius: 8px; border-left: 4px solid #667eea;';
+          div.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+              <div>
+                <strong style="font-size: 18px; color: #333;">${q.nickname}</strong>
+                <span style="color: #999; font-size: 14px; margin-left: 10px;">質問 #${index + 1}</span>
+              </div>
+              <span style="color: #999; font-size: 14px;">${time}</span>
+            </div>
+            <p style="font-size: 16px; line-height: 1.6; color: #555; margin: 10px 0;">
+              <strong>❓ ${q.question}</strong>
+            </p>
+            ${q.comment ? `<p style="font-size: 14px; color: #999; margin-top: 8px; padding-top: 8px; border-top: 1px solid #e0e0e0;">補足: ${q.comment}</p>` : ''}
+          `;
+          questionsList.appendChild(div);
+        });
+      }
+    }
+
+    // 質問をCSVダウンロード
+    function downloadQuestions() {
+      if (currentSessionData.length === 0) {
+        showMessage('adminMessage', 'データを先に読み込んでください', 'error');
+        return;
+      }
+
+      const questions = currentSessionData.filter(d => d.question && d.question.trim());
+
+      if (questions.length === 0) {
+        showMessage('adminMessage', 'ダウンロードする質問がありません', 'error');
+        return;
+      }
+
+      const sessionId = document.getElementById('adminSessionId').value.trim();
+      let csv = 'セッションID,時刻,ニックネーム,質問,補足コメント\n';
+
+      questions.forEach(q => {
+        const time = new Date(q.timestamp).toLocaleTimeString('ja-JP');
+        const question = `"${q.question.replace(/"/g, '""')}"`;
+        const comment = `"${(q.comment || '').replace(/"/g, '""')}"`;
+        csv += `${sessionId},${time},${q.nickname},${question},${comment}\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `questions_${sessionId}_${new Date().getTime()}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      showMessage('adminMessage', `✅ ${questions.length}件の質問をダウンロードしました`, 'success');
     }
 
     // スライド生成
