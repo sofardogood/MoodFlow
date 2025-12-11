@@ -4,14 +4,26 @@
   "description": "会議中の心の変化をリアルタイムで分析するシステム",
   "scripts": {
     "dev": "vercel dev",
+    "dev:local": "node local-server.js",
     "build": "echo 'No build step required'",
     "deploy": "vercel --prod"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@modelcontextprotocol/sdk": "^1.24.3",
+    "@prisma/client": "^5.22.0",
+    "@supabase/supabase-js": "^2.87.1",
+    "body-parser": "^2.2.1",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "googleapis": "^128.0.0",
     "openai": "^4.20.0",
-    "googleapis": "^128.0.0"
+    "zod": "^3.25.76"
   },
   "engines": {
     "node": ">=18"
+  },
+  "devDependencies": {
+    "prisma": "^5.22.0"
   }
 }

@@ -1,4 +1,4 @@
-const { appendToSheet } = require('../lib/sheets');
+const { createMood } = require('../lib/db');
 
 module.exports = async (req, res) => {
   // CORSヘッダーを設定
@@ -32,8 +32,8 @@ module.exports = async (req, res) => {
       });
     }
 
-    // スプレッドシートに追加
-    const result = await appendToSheet({
+    // データベースに追加
+    const result = await createMood({
       sessionId,
       nickname,
       moodScore,

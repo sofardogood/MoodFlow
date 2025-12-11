@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoodFlow - ログイン</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            color: #333;
+        }
+
+        .card {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+
+        input:focus {
+            border-color: #764ba2;
+            outline: none;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #764ba2;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #5a387e;
+        }
+
+        .switch-mode {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        .switch-mode a {
+            color: #764ba2;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        #message {
+            margin-top: 15px;
+            text-align: center;
+            color: #dc3545;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="card">
+        <h1 id="title">ログイン</h1>
+
+        <div class="input-group" id="nameGroup" style="display: none;">
+            <label>お名前</label>
+            <input type="text" id="name" placeholder="山田 太郎">
+        </div>
+
+        <div class="input-group">
+            <label>メールアドレス</label>
+            <input type="email" id="email" placeholder="email@example.com">
+        </div>
+
+        <div class="input-group">
+            <label>パスワード</label>
+            <input type="password" id="password" placeholder="********">
+        </div>
+
+        <button onclick="handleSubmit()" id="submitBtn">ログイン</button>
+
+        <div id="message"></div>
+
+        <div class="switch-mode">
+            <span id="switchText">アカウントをお持ちでないですか？</span>
+            <a onclick="toggleMode()" id="switchBtn" href="javascript:void(0)">新規登録</a>
+        </div>
+    </div>
+
+    <script>
+        let isRegister = false;
+
+        function toggleMode() {
+            isRegister = !isRegister;
+            document.getElementById('title').innerText = isRegister ? 'アカウント登録' : 'ログイン';
+            document.getElementById('submitBtn').innerText = isRegister ? '登録してログイン' : 'ログイン';
+            document.getElementById('switchText').innerText = isRegister ? 'すでにアカウントをお持ちですか？' : 'アカウントをお持ちでないですか？';
+            document.getElementById('switchBtn').innerText = isRegister ? 'ログイン' : '新規登録';
+            document.getElementById('nameGroup').style.display = isRegister ? 'block' : 'none';
+            document.getElementById('message').style.display = 'none';
+        }
+
+        async function handleSubmit() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const name = document.getElementById('name').value;
+
+            if (!email || !password) {
+                showMessage('メールアドレスとパスワードを入力してください', true);
+                return;
+            }
+
+            const action = isRegister ? 'register' : 'login';
+
+            try {
+                const res = await fetch('/api/auth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action, email, password, name })
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    // Save user info
+                    localStorage.setItem('moodflow_user', JSON.stringify(data.user));
+
+                    // Redirect
+                    const params = new URLSearchParams(window.location.search);
+                    const redirect = params.get('redirect') || 'admin.html';
+                    window.location.href = redirect;
+                } else {
+                    showMessage(data.error || 'エラーが発生しました', true);
+                }
+            } catch (e) {
+                showMessage('通信エラーが発生しました', true);
+            }
+        }
+
+        function showMessage(msg, isError) {
+            const el = document.getElementById('message');
+            el.innerText = msg;
+            el.style.color = isError ? '#dc3545' : '#28a745';
+            el.style.display = 'block';
+        }
+    </script>
+
+</body>
+
+</html>

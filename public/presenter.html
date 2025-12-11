@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoodFlow - プレゼンター</title>
+    <script src="/checkAuth.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #f5f7fa;
+            /* White/Light Gray theme */
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            margin-top: 50px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            text-align: center;
+            color: #667eea;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        input[type="text"] {
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            width: 200px;
+            font-size: 1rem;
+        }
+
+        button {
+            padding: 12px 24px;
+            border-radius: 30px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        .btn-start {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-stop {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-start:disabled {
+            background: #e0e0e0;
+            color: #888;
+            cursor: not-allowed;
+        }
+
+        .btn-stop:disabled {
+            background: #e0e0e0;
+            color: #888;
+            cursor: not-allowed;
+        }
+
+        #status {
+            text-align: center;
+            margin: 10px 0;
+            font-weight: bold;
+            height: 1.2em;
+            color: #666;
+        }
+
+        #transcriptLog {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            line-height: 1.5;
+            border: 1px solid #e2e8f0;
+            margin-top: 20px;
+        }
+
+        .transcript-item {
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .time {
+            color: #888;
+            font-size: 0.8em;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div style="margin-bottom: 10px;">
+            <a href="admin.html" style="color: #667eea; text-decoration: none; font-size: 1rem;">← 管理画面に戻る</a>
+        </div>
+        <h1>🎙 プレゼンターモード</h1>
+
+        <div class="card">
+            <div class="controls">
+                <input type="text" id="sessionId" placeholder="セッションID" value="demo-1">
+                <button id="btnStart" class="btn-start" onclick="startRecognition()">記録開始</button>
+                <button id="btnStop" class="btn-stop" onclick="stopRecognition()" disabled>停止</button>
+            </div>
+
+            <div id="status">準備完了</div>
+
+            <div id="transcriptLog">
+                <div style="opacity: 0.5; text-align: center; margin-top: 100px;">
+                    開始ボタンを押して音声認識を始めてください...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let recognition;
+        let isRecognizing = false;
+        let sessionId = 'demo-1';
+
+        // Auto-fill from URL
+        window.onload = function () {
+            const params = new URLSearchParams(window.location.search);
+            const urlSessionId = params.get('sessionId');
+            if (urlSessionId) {
+                document.getElementById('sessionId').value = urlSessionId;
+                sessionId = urlSessionId;
+            }
+        };
+
+        function init() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                alert("このブラウザはWeb Speech APIをサポートしていません。Chromeを使用してください。");
+                return;
+            }
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'ja-JP'; // Japanese
+            recognition.continuous = true;
+            recognition.interimResults = false;
+
+            recognition.onstart = function () {
+                isRecognizing = true;
+                document.getElementById('status').innerText = "🔴 録音中...";
+                document.getElementById('status').style.color = "red";
+                document.getElementById('btnStart').disabled = true;
+                document.getElementById('btnStop').disabled = false;
+            };
+
+            recognition.onend = function () {
+                isRecognizing = false;
+                document.getElementById('status').innerText = "停止中";
+                document.getElementById('status').style.color = "#666";
+                document.getElementById('btnStart').disabled = false;
+                document.getElementById('btnStop').disabled = true;
+            };
+
+            recognition.onresult = async function (event) {
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        const text = event.results[i][0].transcript;
+                        addLog("あなた", text);
+                        await sendTranscript(text);
+                    }
+                }
+            };
+
+            recognition.onerror = function (event) {
+                console.error("Speech Error", event.error);
+                document.getElementById('status').innerText = "エラー: " + event.error;
+            };
+        }
+
+        function startRecognition() {
+            sessionId = document.getElementById('sessionId').value || 'demo-1';
+            if (!recognition) init();
+            if (!isRecognizing) recognition.start();
+        }
+
+        function stopRecognition() {
+            if (recognition && isRecognizing) recognition.stop();
+        }
+
+        function addLog(speaker, text) {
+            const log = document.getElementById('transcriptLog');
+            // Remove placeholder if exists
+            if (log.innerHTML.includes('開始ボタンを押して')) {
+                log.innerHTML = '';
+            }
+
+            const div = document.createElement('div');
+            div.className = 'transcript-item';
+            const time = new Date().toLocaleTimeString();
+            div.innerHTML = `<span class="time">[${time}]</span> <span>${text}</span>`;
+            log.prepend(div);
+        }
+
+        async function sendTranscript(text) {
+            try {
+                const res = await fetch('/api/submit-transcript', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sessionId: sessionId,
+                        text: text,
+                        speaker: 'Presenter'
+                    })
+                });
+                if (!res.ok) console.error("送信失敗");
+            } catch (e) {
+                console.error("ネットワークエラー", e);
+            }
+        }
+
+        // Init speech object lightly
+        init();
+
+    </script>
+</body>
+
+</html>

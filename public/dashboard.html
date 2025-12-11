@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoodFlow - ダッシュボード</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@1.0.1/dist/chartjs-adapter-moment.min.js"></script>
+    <script src="/checkAuth.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #f5f7fa;
+            /* White/Light Theme */
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 15px 30px;
+            background: white;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: #667eea;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        input[type="text"] {
+            padding: 10px 12px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            background: white;
+            color: #333;
+        }
+
+        button {
+            padding: 10px 20px;
+            border-radius: 6px;
+            border: none;
+            background: #667eea;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #5a67d8;
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            gap: 20px;
+            overflow: hidden;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .chart-container {
+            flex: 2;
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            position: relative;
+            min-height: 0;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .transcript-container {
+            flex: 1;
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            overflow-y: auto;
+            border-top: 4px solid #667eea;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .transcript-item {
+            padding: 10px;
+            border-bottom: 1px solid #f0f0f0;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .transcript-time {
+            font-size: 0.8rem;
+            color: #888;
+            margin-right: 10px;
+        }
+
+        .transcript-text {
+            font-size: 1.1rem;
+            color: #333;
+        }
+
+        .stats-overlay {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-align: right;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #666;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <a href="admin.html" style="color: #667eea; text-decoration: none; font-size: 1.2rem;">← 管理画面</a>
+            <h1>MoodFlow ダッシュボード</h1>
+        </div>
+        <div class="controls">
+            <input type="text" id="sessionIdInput" placeholder="セッションID" value="demo-1">
+            <button onclick="updateSession()">接続</button>
+        </div>
+    </header>
+
+    <main>
+        <div class="chart-container">
+            <canvas id="moodChart"></canvas>
+            <div class="stats-overlay">
+                <div id="currentMood" class="stat-value">--</div>
+                <div class="stat-label">現在の平均ムード</div>
+            </div>
+        </div>
+
+        <div class="bottom-panel" style="display: flex; gap: 20px; flex: 1; min-height: 0;">
+            <div class="transcript-container" id="transcriptList" style="flex: 1;">
+                <div style="text-align: center; color: #666; margin-top: 20px;">
+                    リアルタイムで発言を待機中...
+                </div>
+            </div>
+
+            <div class="summary-container" id="summaryList"
+                style="flex: 1; background: white; border-radius: 12px; padding: 20px; overflow-y: auto; border-top: 4px solid #48bb78; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                <h3
+                    style="margin-top: 0; color: #2f855a; font-size: 1.1rem; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px;">
+                    🤖 AI要約 (5分毎)</h3>
+                <div style="text-align: center; color: #a0aec0; margin-top: 20px;">
+                    まだ要約はありません...
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let sessionId = 'demo-1';
+        let chart;
+        let pollingInterval;
+
+        // Initialize Chart
+        function initChart() {
+            const ctx = document.getElementById('moodChart').getContext('2d');
+
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'ムードスコア',
+                        data: [],
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.2)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'second',
+                                displayFormats: { second: 'HH:mm:ss' }
+                            },
+                            grid: { color: '#f0f0f0' },
+                            ticks: { color: '#666' }
+                        },
+                        y: {
+                            min: -5.5,
+                            max: 5.5,
+                            grid: { color: '#f0f0f0' },
+                            ticks: { color: '#666' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index',
+                    },
+                }
+            });
+        }
+
+        function updateSession() {
+            sessionId = document.getElementById('sessionIdInput').value || 'demo-1';
+            // Clear existing data
+            chart.data.datasets[0].data = [];
+            chart.update();
+            document.getElementById('transcriptList').innerHTML = '';
+
+            // Restart poling
+            if (pollingInterval) clearInterval(pollingInterval);
+            fetchData(); // Immediate
+            pollingInterval = setInterval(fetchData, 3000);
+        }
+
+        async function fetchData() {
+            try {
+                const res = await fetch(`/api/get-visual-data?sessionId=${sessionId}`);
+                const data = await res.json();
+
+                updateChart(data.moods);
+                updateTranscripts(data.transcripts);
+                fetchSummaries();
+
+            } catch (e) {
+                console.error("Fetch error", e);
+            }
+        }
+
+        function updateChart(moods) {
+            const points = moods.map(m => ({
+                x: m.timestamp,
+                y: m.score
+            }));
+
+            chart.data.datasets[0].data = points;
+            chart.update('none');
+
+            // Update current mood stat
+            if (moods.length > 0) {
+                const recent = moods.slice(-5);
+                const avg = recent.reduce((sum, m) => sum + m.score, 0) / recent.length;
+                const el = document.getElementById('currentMood');
+                el.textContent = avg.toFixed(1);
+
+                // Color tweaks for white bg
+                if (avg > 0) el.style.color = '#38a169'; // Green
+                else if (avg < 0) el.style.color = '#e53e3e'; // Red
+                else el.style.color = '#718096'; // Gray
+            }
+        }
+
+        function updateTranscripts(transcripts) {
+            const list = document.getElementById('transcriptList');
+            const currentCount = list.getElementsByClassName('transcript-item').length;
+
+            if (transcripts.length > currentCount) {
+                const newItems = transcripts.slice(currentCount);
+
+                if (currentCount === 0 && newItems.length > 0) list.innerHTML = '';
+
+                newItems.forEach(t => {
+                    const div = document.createElement('div');
+                    div.className = 'transcript-item';
+                    div.innerHTML = `
+          <span class="transcript-time">${new Date(t.timestamp).toLocaleTimeString()}</span>
+          <span class="transcript-text">${t.text}</span>
+        `;
+                    list.prepend(div);
+                });
+            }
+        }
+
+        async function fetchSummaries() {
+            try {
+                const res = await fetch(`/api/get-summaries?sessionId=${sessionId}`);
+                const data = await res.json();
+                if (data.success && data.summaries.length > 0) {
+                    const list = document.getElementById('summaryList');
+                    // Simple rebuild for summaries as they are infrequent
+                    const html = data.summaries.map(s => `
+                        <div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed #e2e8f0;">
+                            <div style="font-size: 0.8rem; color: #718096; margin-bottom: 5px;">
+                                ${new Date(s.startTime).toLocaleTimeString()} - ${new Date(s.endTime).toLocaleTimeString()}
+                            </div>
+                            <div style="font-size: 0.95rem; line-height: 1.6; color: #2d3748;">
+                                ${s.content}
+                            </div>
+                        </div>
+                    `).join('');
+
+                    if (list.innerHTML !== html) { // basic diff
+                        list.innerHTML = `<h3 style="margin-top: 0; color: #2f855a; font-size: 1.1rem; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px;">🤖 AI要約 (5分毎)</h3>` + html;
+                    }
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        // Init
+        initChart();
+
+        // Auto-load from URL
+        const params = new URLSearchParams(window.location.search);
+        const urlSessionId = params.get('sessionId');
+        if (urlSessionId) {
+            document.getElementById('sessionIdInput').value = urlSessionId;
+            updateSession();
+        } else {
+            updateSession();
+        }
+    </script>
+</body>
+
+</html>

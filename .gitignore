@@ -55,3 +55,5 @@ dist/
 build/
 .next/
 out/
+
+/lib/generated/prisma

@@ -1,418 +1,344 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>MoodFlow - 参加者入力</title>
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>MoodFlow</title>
   <style>
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+      background-size: 400% 400%;
+      animation: gradientBG 15s ease infinite;
       min-height: 100vh;
-      padding: 20px;
-      /* iOS notch safe area */
-      padding-bottom: calc(20px + env(safe-area-inset-bottom));
+      display: flex;
+      flex-direction: column;
+      color: white;
+      overflow-x: hidden;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    @keyframes gradientBG {
+      0% {
+        background-position: 0% 50%;
+      }
+
+      50% {
+        background-position: 100% 50%;
+      }
+
+      100% {
+        background-position: 0% 50%;
+      }
     }
 
     .container {
-      max-width: 500px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: 600px;
       margin: 0 auto;
+      padding: 20px;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* Welcome & Join Screen */
+    .screen {
+      display: none;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .screen.active {
+      display: flex;
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+      margin-bottom: 20px;
     }
 
     h1 {
-      color: white;
+      font-size: 2.5rem;
       text-align: center;
-      margin-bottom: 30px;
-      font-size: 32px;
-    }
-
-    .card {
-      background: white;
-      border-radius: 20px;
-      padding: 30px;
-      margin-bottom: 20px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-    }
-
-    .welcome-screen, .input-screen {
-      display: none;
-    }
-
-    .welcome-screen.active, .input-screen.active {
-      display: block;
+      margin-bottom: 1rem;
+      font-weight: 700;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
     }
 
     .input-group {
-      margin-bottom: 20px;
+      margin-bottom: 1.5rem;
     }
 
     label {
       display: block;
-      font-size: 14px;
+      margin-bottom: 0.5rem;
       font-weight: 600;
-      color: #555;
-      margin-bottom: 8px;
+      font-size: 0.9rem;
+      opacity: 0.9;
     }
 
-    input[type="text"] {
-      width: 100%;
-      padding: 15px;
-      border: 2px solid #e0e0e0;
-      border-radius: 12px;
-      font-size: 16px;
-      transition: border-color 0.3s;
-    }
-
-    input[type="text"]:focus {
-      outline: none;
-      border-color: #667eea;
-    }
-
-    .emoji-selector {
-      display: flex;
-      justify-content: space-around;
-      margin: 20px 0;
-    }
-
-    .emoji-btn {
-      width: 70px;
-      height: 70px;
-      border: 3px solid transparent;
-      border-radius: 50%;
-      font-size: 36px;
-      cursor: pointer;
-      transition: all 0.3s;
-      background: #f8f9fa;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .emoji-btn:hover {
-      transform: scale(1.1);
-    }
-
-    .emoji-btn.active {
-      transform: scale(1.15);
-      border-color: #667eea;
-      box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-      background: #e8ecff;
-    }
-
-    .slider-container {
-      margin: 25px 0;
-    }
-
-    .slider {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 100%;
-      height: 10px;
-      border-radius: 5px;
-      background: linear-gradient(to right, #dc3545 0%, #ffc107 50%, #28a745 100%);
-      outline: none;
-    }
-
-    .slider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 35px;
-      height: 35px;
-      border-radius: 50%;
-      background: white;
-      cursor: pointer;
-      box-shadow: 0 3px 15px rgba(0,0,0,0.3);
-      border: 4px solid #667eea;
-    }
-
-    .slider::-moz-range-thumb {
-      width: 35px;
-      height: 35px;
-      border-radius: 50%;
-      background: white;
-      cursor: pointer;
-      box-shadow: 0 3px 15px rgba(0,0,0,0.3);
-      border: 4px solid #667eea;
-    }
-
-    .score-display {
-      text-align: center;
-      font-size: 56px;
-      font-weight: bold;
-      margin: 20px 0;
-      color: #667eea;
-      min-height: 70px;
-    }
-
-    .score-labels {
-      display: flex;
-      justify-content: space-between;
-      font-size: 13px;
-      color: #999;
-      margin-top: 8px;
-    }
-
+    input[type="text"],
     textarea {
       width: 100%;
-      padding: 15px;
-      border: 2px solid #e0e0e0;
+      padding: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      background: rgba(0, 0, 0, 0.2);
       border-radius: 12px;
-      font-size: 16px;
-      font-family: inherit;
-      min-height: 120px;
-      resize: vertical;
-      transition: border-color 0.3s;
+      color: white;
+      font-size: 1.1rem;
+      transition: all 0.3s;
     }
 
+    input[type="text"]:focus,
     textarea:focus {
       outline: none;
-      border-color: #667eea;
+      border-color: white;
+      background: rgba(0, 0, 0, 0.4);
     }
 
-    /* モバイル向けタッチ/可読性強化 */
-    input, textarea, .btn {
-      -webkit-tap-highlight-color: rgba(0,0,0,0);
-    }
-
-    @media (max-width: 600px) {
-      input[type="text"], textarea, .btn {
-        font-size: 18px;
-      }
-
-      .btn {
-        padding: 16px;
-        border-radius: 14px;
-        min-height: 56px;
-      }
-
-      .emoji-btn {
-        width: 62px;
-        height: 62px;
-        font-size: 30px;
-      }
-
-      /* キーボード表示時に入力欄が隠れにくくする */
-      input:focus, textarea:focus {
-        scroll-margin-bottom: 220px;
-      }
+    input::placeholder,
+    textarea::placeholder {
+      color: rgba(255, 255, 255, 0.6);
     }
 
     .btn {
       width: 100%;
       padding: 18px;
       border: none;
-      border-radius: 12px;
-      font-size: 18px;
-      font-weight: 600;
+      border-radius: 50px;
+      font-size: 1.1rem;
+      font-weight: bold;
       cursor: pointer;
-      transition: all 0.3s;
-      color: white;
+      transition: transform 0.2s, box-shadow 0.2s;
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: white;
+      color: #333;
     }
 
-    .btn-primary:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+    .btn-primary:active {
+      transform: scale(0.98);
     }
 
-    .btn-primary:active:not(:disabled) {
-      transform: translateY(0);
+    /* Main Reaction Design */
+    .reaction-zone {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 2rem;
     }
 
-    .btn-success {
-      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    .reaction-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      width: 100%;
     }
 
-    .btn-success:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(40, 167, 69, 0.4);
-    }
-
-    .btn:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-
-    .participant-info {
-      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-      padding: 20px;
-      border-radius: 15px;
-      margin-bottom: 25px;
-      text-align: center;
-      border: 2px solid #dee2e6;
-    }
-
-    .nickname-display {
-      font-size: 28px;
-      font-weight: bold;
-      color: #667eea;
-      margin-bottom: 5px;
-    }
-
-    .status-message {
-      text-align: center;
-      padding: 15px;
-      border-radius: 10px;
-      margin-bottom: 20px;
-      font-size: 15px;
-      font-weight: 500;
-    }
-
-    .status-success {
-      background: #d4edda;
-      color: #155724;
-      border: 2px solid #c3e6cb;
-    }
-
-    .status-error {
-      background: #f8d7da;
-      color: #721c24;
-      border: 2px solid #f5c6cb;
-    }
-
-    .quick-info {
-      text-align: center;
-      font-size: 13px;
-      color: #6c757d;
-      margin-top: 12px;
-    }
-
-    .history-section {
-      margin-top: 20px;
-    }
-
-    .history-item {
-      background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-      padding: 15px;
-      border-radius: 12px;
-      margin-bottom: 12px;
-      border-left: 5px solid #667eea;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-
-    .history-time {
-      font-size: 12px;
-      color: #6c757d;
-      margin-bottom: 5px;
-    }
-
-    .history-score {
-      font-size: 22px;
-      font-weight: bold;
-      color: #667eea;
-      margin: 8px 0;
-    }
-
-    .history-comment {
-      font-size: 14px;
-      color: #495057;
-      line-height: 1.5;
-    }
-
-    .loading {
-      text-align: center;
-      padding: 20px;
-    }
-
-    .spinner {
-      border: 4px solid #f3f3f3;
-      border-top: 4px solid #667eea;
+    .reaction-btn {
+      width: 90px;
+      height: 90px;
       border-radius: 50%;
-      width: 50px;
-      height: 50px;
-      animation: spin 1s linear infinite;
-      margin: 0 auto;
+      border: none;
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(5px);
+      font-size: 3rem;
+      cursor: pointer;
+      transition: transform 0.2s, background 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     }
 
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+    .reaction-btn:active {
+      transform: scale(0.9);
+      background: rgba(255, 255, 255, 0.4);
     }
 
-    .info-text {
-      font-size: 13px;
-      color: #6c757d;
-      margin-top: 8px;
-      line-height: 1.5;
+    .comment-trigger {
+      font-size: 0.9rem;
+      color: rgba(255, 255, 255, 0.8);
+      text-decoration: underline;
+      cursor: pointer;
+      padding: 10px;
+    }
+
+    /* Modal for Comment */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 100;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .modal.active {
+      display: flex;
+      animation: fadeIn 0.3s;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    /* Animation Layer */
+    .animation-layer {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 50;
+      overflow: hidden;
+    }
+
+    .animating-emoji {
+      position: absolute;
+      font-size: 4rem;
+      transform-origin: center;
+      animation: explode 1s ease-out forwards;
+      opacity: 0.8;
+    }
+
+    @keyframes explode {
+      0% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0.8;
+      }
+
+      100% {
+        transform: translate(-50%, -50%) scale(15);
+        opacity: 0;
+      }
+    }
+
+    .participant-label {
+      text-align: center;
+      padding: 10px;
+      font-size: 1rem;
+      opacity: 0.8;
+      margin-bottom: 20px;
+    }
+
+    #statusMessage {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.8);
+      padding: 10px 20px;
+      border-radius: 30px;
+      z-index: 200;
+      display: none;
+      white-space: nowrap;
     }
   </style>
 </head>
-<body>
-  <div class="container">
-    <h1>🌊 MoodFlow</h1>
 
-    <!-- ウェルカム画面 -->
-    <div class="welcome-screen active" id="welcomeScreen">
-      <div class="card">
-        <h2 style="color: #667eea; margin-bottom: 20px;">会議に参加</h2>
-        <div class="input-group">
-          <label for="sessionInput">セッションID</label>
-          <input type="text" id="sessionInput" placeholder="例: meeting-001">
-          <p class="info-text">会議主催者から共有されたIDを入力してください</p>
+<body>
+
+  <!-- Background Animation Layer -->
+  <div class="animation-layer" id="animationLayer"></div>
+
+  <!-- Status Toast -->
+  <div id="statusMessage">送信しました</div>
+
+  <div class="container">
+
+    <!-- JOIN SCREEN -->
+    <div id="joinScreen" class="screen active">
+      <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
+        <h1>MoodFlow</h1>
+        <p style="text-align: center; margin-bottom: 20px; opacity: 0.9;">会議のムードをリアルタイムで共有</p>
+
+        <div
+          style="display: flex; gap: 10px; justify-content: center; margin-bottom: 30px; font-size: 0.9rem; position: relative; z-index: 10;">
+          <a href="admin.html" style="color: white; opacity: 0.7; padding: 10px;">🔐 管理者</a>
         </div>
-        <div class="input-group">
-          <label for="nicknameInput">ニックネーム</label>
-          <input type="text" id="nicknameInput" placeholder="例: キリンさん" maxlength="20">
-          <p class="info-text">本名でなくても構いません。好きな名前で参加できます。</p>
+
+        <div class="glass-card">
+          <div class="input-group">
+            <label>セッションID</label>
+            <input type="text" id="sessionInput" placeholder="meeting-001">
+          </div>
+          <div class="input-group">
+            <label>ニックネーム</label>
+            <input type="text" id="nicknameInput" placeholder="例: ペンギン">
+          </div>
+          <button class="btn btn-primary" onclick="joinSession()">参加する</button>
         </div>
-        <button class="btn btn-primary" onclick="joinSession()">参加する</button>
       </div>
     </div>
 
-    <!-- 入力画面 -->
-    <div class="input-screen" id="inputScreen">
-      <div class="participant-info">
-        <div class="nickname-display" id="nicknameDisplay"></div>
-        <div style="font-size: 13px; color: #6c757d; margin-top: 5px;">として参加中</div>
+    <!-- MAIN SCREEN -->
+    <div id="mainScreen" class="screen">
+      <div class="participant-label">
+        <span id="displayNickname">ゲスト</span> として参加中
+        <button onclick="leaveSession()"
+          style="margin-left: 10px; padding: 5px 10px; background: rgba(255,255,255,0.2); border: none; border-radius: 4px; color: white; cursor: pointer; font-size: 0.8rem;">退出</button>
       </div>
 
-      <div id="statusMessage"></div>
+      <div class="reaction-zone">
+        <h2 style="font-weight: 300; opacity: 0.9;">今の気分は？</h2>
 
-      <div class="card">
-        <h2 style="color: #667eea; margin-bottom: 20px;">今の気持ちは？</h2>
-
-        <!-- 絵文字セレクター -->
-        <div class="emoji-selector">
-          <button class="emoji-btn" onclick="selectEmoji('😢', -5)" title="とてもネガティブ">😢</button>
-          <button class="emoji-btn" onclick="selectEmoji('😐', 0)" title="ニュートラル">😐</button>
-          <button class="emoji-btn" onclick="selectEmoji('😊', 5)" title="とてもポジティブ">😊</button>
+        <div class="reaction-buttons">
+          <button class="reaction-btn" onclick="handleReaction(event, '😢', -5)">😢</button>
+          <button class="reaction-btn" onclick="handleReaction(event, '😐', 0)">😐</button>
+          <button class="reaction-btn" onclick="handleReaction(event, '😊', 5)">😊</button>
         </div>
 
-        <!-- スライダー -->
-        <div class="slider-container">
-          <div class="score-display" id="scoreDisplay">😐 0</div>
-          <input type="range" min="-5" max="5" value="0" class="slider" id="moodSlider" oninput="updateScore()">
-          <div class="score-labels">
-            <span>😢 ネガティブ</span>
-            <span>😊 ポジティブ</span>
-          </div>
+        <div class="comment-trigger" onclick="openCommentModal()">
+          💬 コメントを書く
         </div>
       </div>
+    </div>
 
-      <div class="card">
-        <h2 style="color: #667eea; margin-bottom: 15px;">コメント（任意）</h2>
-        <div class="input-group">
-          <textarea id="commentInput" placeholder="今の気持ちや意見を自由に書いてください...&#10;&#10;例:&#10;・このアイデアいいですね！&#10;・少し心配です...&#10;・もっと詳しく聞きたいです"></textarea>
-        </div>
-        <button class="btn btn-success" onclick="submitMood()" id="submitBtn">送信</button>
-        <div class="quick-info">
-          いつでも何度でも送信できます
-        </div>
-      </div>
+  </div>
 
-      <!-- 送信履歴 -->
-      <div class="card history-section" id="historySection" style="display: none;">
-        <h2 style="color: #667eea; margin-bottom: 15px;">あなたの記録</h2>
-        <div id="historyList"></div>
+  <!-- COMMENT MODAL -->
+  <div id="commentModal" class="modal">
+    <div class="glass-card" style="width: 100%; max-width: 400px;">
+      <h3 style="margin-bottom: 15px;">コメント</h3>
+      <textarea id="commentInput" rows="4" placeholder="意見や感想を入力..."></textarea>
+      <div style="display: flex; gap: 10px; margin-top: 15px;">
+        <button class="btn" style="background: rgba(255,255,255,0.2); color: white;"
+          onclick="closeCommentModal()">キャンセル</button>
+        <button class="btn btn-primary" onclick="submitComment()">送信</button>
       </div>
     </div>
   </div>
@@ -420,178 +346,127 @@
   <script>
     let sessionId = null;
     let nickname = null;
-    let currentMoodScore = 0;
-    let currentEmoticon = '😐';
-    let submissionHistory = [];
 
-    // 初期化
-    window.onload = function() {
-      const savedSessionId = localStorage.getItem('moodflow_sessionId');
-      const savedNickname = localStorage.getItem('moodflow_nickname');
-
-      if (savedSessionId && savedNickname) {
-        sessionId = savedSessionId;
-        nickname = savedNickname;
-        showInputScreen();
+    // --- INIT ---
+    window.onload = function () {
+      const savedSession = localStorage.getItem('moodflow_sessionId');
+      const savedNick = localStorage.getItem('moodflow_nickname');
+      if (savedSession && savedNick) {
+        sessionId = savedSession;
+        nickname = savedNick;
+        document.getElementById('displayNickname').textContent = nickname;
+        switchScreen('mainScreen');
       }
     };
 
-    // セッション参加
-    async function joinSession() {
-      const sessionInput = document.getElementById('sessionInput').value.trim();
-      const nicknameInput = document.getElementById('nicknameInput').value.trim();
+    function switchScreen(id) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
 
-      if (!sessionInput) {
-        alert('セッションIDを入力してください');
+    // --- ACTIONS ---
+    function joinSession() {
+      const sVal = document.getElementById('sessionInput').value.trim();
+      const nVal = document.getElementById('nicknameInput').value.trim();
+
+      if (!sVal || !nVal) {
+        alert("セッションIDとニックネームを入力してください");
         return;
       }
 
-      if (!nicknameInput) {
-        alert('ニックネームを入力してください');
-        return;
-      }
-
-      sessionId = sessionInput;
-      nickname = nicknameInput;
-
-      // ローカルストレージに保存
+      sessionId = sVal;
+      nickname = nVal;
       localStorage.setItem('moodflow_sessionId', sessionId);
       localStorage.setItem('moodflow_nickname', nickname);
 
-      showInputScreen();
+      document.getElementById('displayNickname').textContent = nickname;
+      switchScreen('mainScreen');
     }
 
-    // 入力画面を表示
-    function showInputScreen() {
-      document.getElementById('welcomeScreen').classList.remove('active');
-      document.getElementById('inputScreen').classList.add('active');
-      document.getElementById('nicknameDisplay').textContent = nickname;
+    function leaveSession() {
+      localStorage.removeItem('moodflow_sessionId');
+      localStorage.removeItem('moodflow_nickname');
+      sessionId = null;
+      nickname = null;
+      switchScreen('joinScreen');
     }
 
-    // 絵文字を選択
-    function selectEmoji(emoji, score) {
-      currentEmoticon = emoji;
-      currentMoodScore = score;
-      document.getElementById('moodSlider').value = score;
-      updateScore();
+    function handleReaction(e, emoji, score) {
+      // 1. Trigger Animation
+      createExplosion(e.clientX, e.clientY, emoji);
 
-      const buttons = document.querySelectorAll('.emoji-btn');
-      buttons.forEach(btn => btn.classList.remove('active'));
-      event.target.classList.add('active');
+      // 2. Send Data
+      sendData(emoji, score, "");
+
+      // 3. Feedback Haptic/Sound (Optional)
+      if (navigator.vibrate) navigator.vibrate(50);
     }
 
-    // スコア表示を更新
-    function updateScore() {
-      const score = parseInt(document.getElementById('moodSlider').value);
-      currentMoodScore = score;
+    function createExplosion(x, y, emoji) {
+      const layer = document.getElementById('animationLayer');
+      const el = document.createElement('div');
+      el.innerText = emoji;
+      el.className = 'animating-emoji';
+      el.style.left = x + 'px';
+      el.style.top = y + 'px';
 
-      let emoji = '😐';
-      if (score >= 4) emoji = '😄';
-      else if (score >= 2) emoji = '😊';
-      else if (score >= 1) emoji = '🙂';
-      else if (score <= -4) emoji = '😭';
-      else if (score <= -2) emoji = '😢';
-      else if (score <= -1) emoji = '😟';
+      layer.appendChild(el);
 
-      currentEmoticon = emoji;
-
-      const scoreText = score > 0 ? `+${score}` : score;
-      document.getElementById('scoreDisplay').textContent = `${emoji} ${scoreText}`;
+      // Remove after animation
+      setTimeout(() => {
+        el.remove();
+      }, 1000);
     }
 
-    // ムードを送信
-    async function submitMood() {
-      const comment = document.getElementById('commentInput').value.trim();
-      const submitBtn = document.getElementById('submitBtn');
+    // --- COMMENT MODAL ---
+    function openCommentModal() {
+      document.getElementById('commentModal').classList.add('active');
+      setTimeout(() => document.getElementById('commentInput').focus(), 100);
+    }
 
-      submitBtn.disabled = true;
-      submitBtn.textContent = '送信中...';
+    function closeCommentModal() {
+      document.getElementById('commentModal').classList.remove('active');
+    }
 
-      try {
-        const response = await fetch('/api/submit-mood', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            sessionId: sessionId,
-            nickname: nickname,
-            moodScore: currentMoodScore,
-            comment: comment,
-            emoticon: currentEmoticon
-          })
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-          showSuccess('送信しました！');
-          document.getElementById('commentInput').value = '';
-          addToHistory(currentMoodScore, currentEmoticon, comment);
-        } else {
-          showError(result.error || '送信に失敗しました');
-        }
-      } catch (error) {
-        showError('送信エラー: ' + error.message);
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = '送信';
+    function submitComment() {
+      const text = document.getElementById('commentInput').value.trim();
+      if (text) {
+        sendData('💬', 0, text); // Comment is neutral mood usually, or 0
+        document.getElementById('commentInput').value = '';
+        closeCommentModal();
+        showToast("コメントを送信しました");
+      } else {
+        closeCommentModal();
       }
     }
 
-    // 履歴に追加
-    function addToHistory(score, emoticon, comment) {
-      const now = new Date();
-      submissionHistory.unshift({
-        time: now,
-        score: score,
-        emoticon: emoticon,
-        comment: comment
-      });
-
-      const historySection = document.getElementById('historySection');
-      historySection.style.display = 'block';
-
-      const historyList = document.getElementById('historyList');
-      historyList.innerHTML = '';
-
-      submissionHistory.slice(0, 10).forEach(item => {
-        const div = document.createElement('div');
-        div.className = 'history-item';
-
-        const scoreText = item.score > 0 ? `+${item.score}` : item.score;
-
-        div.innerHTML = `
-          <div class="history-time">${item.time.toLocaleTimeString('ja-JP')}</div>
-          <div class="history-score">${item.emoticon} ${scoreText}</div>
-          ${item.comment ? `<div class="history-comment">${item.comment}</div>` : ''}
-        `;
-        historyList.appendChild(div);
-      });
+    // --- API ---
+    async function sendData(emoji, score, comment) {
+      try {
+        await fetch('/api/submit-mood', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId,
+            nickname,
+            moodScore: score,
+            emoticon: emoji,
+            comment: comment
+          })
+        });
+        // Success silent for rapid tapping
+      } catch (e) {
+        console.error("Send failed", e);
+      }
     }
 
-    // ステータスメッセージ
-    function showSuccess(message) {
-      const statusDiv = document.getElementById('statusMessage');
-      statusDiv.className = 'status-message status-success';
-      statusDiv.textContent = message;
-      statusDiv.style.display = 'block';
-
-      setTimeout(() => {
-        statusDiv.style.display = 'none';
-      }, 3000);
-    }
-
-    function showError(message) {
-      const statusDiv = document.getElementById('statusMessage');
-      statusDiv.className = 'status-message status-error';
-      statusDiv.textContent = message;
-      statusDiv.style.display = 'block';
-
-      setTimeout(() => {
-        statusDiv.style.display = 'none';
-      }, 5000);
+    function showToast(msg) {
+      const t = document.getElementById('statusMessage');
+      t.textContent = msg;
+      t.style.display = 'block';
+      setTimeout(() => { t.style.display = 'none'; }, 2000);
     }
   </script>
 </body>
+
 </html>
