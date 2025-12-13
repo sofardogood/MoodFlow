@@ -4,68 +4,52 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MoodFlow - 管理画面</title>
+  <title>補佐やねん 管理画面</title>
   <script src="/checkAuth.js"></script>
   <style>
     body {
-      font-family: 'Segoe UI', Roboto, sans-serif;
-      background: #f5f7fa;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      background: #f8f9fa;
+      color: #333;
       margin: 0;
       padding: 0;
-      color: #333;
     }
 
     .container {
-      max-width: 800px;
+      max-width: 900px;
       margin: 40px auto;
-      padding: 20px;
+      padding: 0 20px;
     }
 
     header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 40px;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #dee2e6;
     }
 
     h1 {
       margin: 0;
-      color: #667eea;
+      font-size: 24px;
+      font-weight: 500;
+      color: #212529;
     }
 
     .card {
       background: white;
-      border-radius: 12px;
-      padding: 24px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-      margin-bottom: 24px;
+      border: 1px solid #dee2e6;
+      border-radius: 4px;
+      padding: 20px;
+      margin-bottom: 20px;
     }
 
-    .btn {
-      padding: 10px 20px;
-      border-radius: 6px;
-      border: none;
-      cursor: pointer;
-      font-weight: bold;
-      text-decoration: none;
-      display: inline-block;
-      transition: background 0.2s;
-    }
-
-    .btn-primary {
-      background: #667eea;
-      color: white;
-    }
-
-    .btn-secondary {
-      background: #cbd5e0;
-      color: #4a5568;
-    }
-
-    .btn-outline {
-      border: 1px solid #667eea;
-      color: #667eea;
-      background: transparent;
+    h2 {
+      margin-top: 0;
+      font-size: 18px;
+      margin-bottom: 15px;
+      color: #495057;
     }
 
     .input-group {
@@ -74,21 +58,71 @@
     }
 
     input[type="text"] {
-      padding: 15px;
-      /* Larger padding */
-      border: 1px solid #e2e8f0;
-      border-radius: 6px;
       flex: 1;
-      font-size: 1.1rem;
-      /* Larger font */
+      padding: 10px;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    button,
+    .btn {
+      padding: 10px 16px;
+      border-radius: 4px;
+      border: 1px solid transparent;
+      font-size: 14px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      text-align: center;
+    }
+
+    .btn-primary {
+      background-color: #007bff;
+      color: white;
+      border-color: #007bff;
+    }
+
+    .btn-primary:hover {
+      background-color: #0069d9;
+    }
+
+    .btn-danger {
+      background-color: #dc3545;
+      color: white;
+      border-color: #dc3545;
+    }
+
+    .btn-danger:hover {
+      background-color: #c82333;
+    }
+
+    .btn-secondary {
+      background-color: #6c757d;
+      color: white;
+      border-color: #6c757d;
+    }
+
+    .btn-secondary:hover {
+      background-color: #5a6268;
+    }
+
+    .btn-outline {
+      background-color: white;
+      color: #007bff;
+      border-color: #007bff;
+    }
+
+    .btn-outline:hover {
+      background-color: #f8f9fa;
     }
 
     .session-item {
+      padding: 15px 0;
+      border-bottom: 1px solid #eee;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 16px;
-      border-bottom: 1px solid #edf2f7;
     }
 
     .session-item:last-child {
@@ -96,31 +130,50 @@
     }
 
     .session-info h3 {
-      margin: 0 0 5px 0;
-      font-size: 1.1rem;
+      margin: 0 0 5px;
+      font-size: 16px;
     }
 
     .session-meta {
-      font-size: 0.85rem;
-      color: #718096;
+      font-size: 12px;
+      color: #6c757d;
     }
 
     .actions {
       display: flex;
       gap: 8px;
-      white-space: nowrap;
-      /* Prevent wrapping */
-    }
-
-    .actions a {
-      font-size: 0.9rem;
-      padding: 6px 12px;
+      align-items: center;
     }
 
     .logout {
-      color: #e53e3e;
+      font-size: 14px;
+      color: #6c757d;
       cursor: pointer;
-      font-size: 0.9rem;
+      text-decoration: underline;
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-content {
+      background: white;
+      padding: 30px;
+      border-radius: 4px;
+      max-width: 800px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
     }
   </style>
 </head>
@@ -129,7 +182,7 @@
 
   <div class="container">
     <header>
-      <h1>MoodFlow 管理画面</h1>
+      <h1>補佐やねん 管理画面</h1>
       <div>
         <span id="userName" style="margin-right: 15px; font-weight: bold;"></span>
         <span class="logout" onclick="logout()">ログアウト</span>
@@ -138,24 +191,35 @@
 
     <!-- Create Session -->
     <div class="card">
-      <h2>新規セッション作成</h2>
+      <h2>新規セッション</h2>
       <div class="input-group">
-        <input type="text" id="newSessionName" placeholder="セッション名 (例: 定例会議 12/10)">
+        <input type="text" id="newSessionName" placeholder="セッション名を入力">
         <button class="btn btn-primary" onclick="createSession()">作成</button>
       </div>
     </div>
 
     <!-- Session List -->
     <div class="card">
-      <h2>あなたのセッション</h2>
+      <h2>セッション一覧</h2>
       <div id="sessionList">
-        <p style="text-align: center; color: #a0aec0;">読み込み中...</p>
+        <p style="text-align: center; color: #6c757d;">読み込み中...</p>
       </div>
     </div>
   </div>
 
+  <!-- Analysis Modal -->
+  <div id="analysisModal" class="modal">
+    <div class="modal-content">
+      <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+        <h2 style="margin:0;">分析レポート</h2>
+        <span onclick="document.getElementById('analysisModal').style.display='none'"
+          style="cursor:pointer; font-size:20px;">&times;</span>
+      </div>
+      <div id="analysisContent"></div>
+    </div>
+  </div>
+
   <script>
-    // Get user from localStorage (set by login.html)
     const userStr = localStorage.getItem('moodflow_user');
     const user = userStr ? JSON.parse(userStr) : null;
 
@@ -170,57 +234,57 @@
           headers: { 'x-user-id': user.id }
         });
         const data = await res.json();
-
         const list = document.getElementById('sessionList');
+
         if (data.success && data.sessions.length > 0) {
           list.innerHTML = data.sessions.map(s => {
             const isEnded = s.isActive === false;
             let actionArea = '';
+
             if (!isEnded) {
-              // Active: Show End button
-              actionArea = `<button onclick="endSession('${s.id}')" class="btn btn-primary" style="background:#e53e3e; font-size:0.9rem;">📋 終了してアンケート分析</button>`;
+              actionArea = `<button onclick="endSession('${s.id}')" class="btn btn-danger">終了</button>`;
             } else {
-              // Ended: Show Analyze button + Survey count
               const surveyCount = s._count ? s._count.surveyResponses : 0;
               actionArea = `
-                    <div style="display:flex; flex-direction:column; align-items:end; gap:5px;">
-                        <span style="font-size:0.85rem; color:#4a5568;">アンケート回答: <strong>${surveyCount}</strong>件</span>
-                        <button onclick="analyzeSession('${s.id}')" class="btn btn-outline" style="border-color: #ed8936; color: #ed8936; font-size:0.9rem;">📝 分析を実行</button>
-                    </div>
-                `;
+                 <div style="text-align:right;">
+                   <div style="font-size:12px; margin-bottom:4px;">回答数: ${surveyCount}</div>
+                   <button onclick="analyzeSession('${s.id}')" class="btn btn-outline">分析</button>
+                 </div>
+               `;
             }
 
             return `
-          <div class="session-item">
-            <div class="session-info">
-              <h3>${escapeHtml(s.name)}</h3>
-              <div class="session-meta">Created: ${new Date(s.createdAt).toLocaleString()} | ID: ${s.id}</div>
-            </div>
-            <div class="actions" style="align-items:center;">
-              <a href="presenter.html?sessionId=${s.id}" class="btn btn-primary" target="_blank">🎤 プレゼンター</a>
-              <a href="dashboard.html?sessionId=${s.id}" class="btn btn-outline" target="_blank">📊 ダッシュボード</a>
-              ${actionArea}
-            </div>
-          </div>
-        `}).join('');
+              <div class="session-item">
+                <div class="session-info">
+                  <h3>${escapeHtml(s.name)}</h3>
+                  <div class="session-meta">作成日: ${new Date(s.createdAt).toLocaleDateString()} ${new Date(s.createdAt).toLocaleTimeString()}</div>
+                </div>
+                <div class="actions">
+                  <a href="presenter.html?sessionId=${s.id}" class="btn btn-secondary" target="_blank">発表者</a>
+                  <a href="dashboard.html?sessionId=${s.id}" class="btn btn-secondary" target="_blank">ダッシュボード</a>
+                  ${actionArea}
+                </div>
+              </div>
+            `;
+          }).join('');
         } else {
-          list.innerHTML = '<p style="text-align: center; color: #a0aec0;">まだセッションがありません</p>';
+          list.innerHTML = '<p style="text-align: center; color: #6c757d;">セッションがありません</p>';
         }
       } catch (e) {
         console.error(e);
-        document.getElementById('sessionList').innerHTML = '<p style="color: red;">読み込みエラーが発生しました</p>';
+        document.getElementById('sessionList').innerHTML = '<p style="color: red;">エラーが発生しました</p>';
       }
     }
 
     async function endSession(sessionId) {
-      if (!confirm('セッションを終了しますか？\n参加者はアンケート画面へ移動します。')) return;
+      if (!confirm('セッションを終了しますか？')) return;
       try {
         await fetch(`/api/session?sessionId=${sessionId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'end' })
         });
-        loadSessions(); // Reload to update UI
+        loadSessions();
       } catch (e) { alert("エラーが発生しました"); }
     }
 
@@ -228,26 +292,18 @@
       const nameInput = document.getElementById('newSessionName');
       const name = nameInput.value.trim();
       if (!name) return;
-
       try {
         const res = await fetch('/api/my-sessions', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-user-id': user.id
-          },
+          headers: { 'Content-Type': 'application/json', 'x-user-id': user.id },
           body: JSON.stringify({ name })
         });
         const data = await res.json();
         if (data.success) {
           nameInput.value = '';
           loadSessions();
-        } else {
-          alert('作成失敗: ' + data.error);
-        }
-      } catch (e) {
-        alert('エラーが発生しました');
-      }
+        } else { alert('作成失敗: ' + data.error); }
+      } catch (e) { alert('エラーが発生しました'); }
     }
 
     function logout() {
@@ -257,41 +313,16 @@
 
     function escapeHtml(text) {
       if (!text) return '';
-      return text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+      return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     }
-  </script>
-  <!-- Analysis Modal -->
-  <div id="analysisModal"
-    style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); z-index:100; justify-content:center; align-items:center; padding:20px;">
-    <div
-      style="background:white; width:100%; max-width:800px; max-height:90vh; overflow-y:auto; border-radius:12px; padding:30px;">
-      <h2 style="margin-top:0; color:#667eea; display:flex; justify-content:space-between; align-items:center;">
-        会議分析レポート
-        <span onclick="document.getElementById('analysisModal').style.display='none'"
-          style="cursor:pointer; color:#999; font-size:1.5rem;">&times;</span>
-      </h2>
-      <div id="analysisContent">
-        <p style="text-align:center; color:#666;">分析中... (数秒かかります)</p>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    // ... existing script ...
 
     async function analyzeSession(sessionId) {
       const modal = document.getElementById('analysisModal');
       const content = document.getElementById('analysisContent');
       modal.style.display = 'flex';
-      content.innerHTML = '<p style="text-align:center; color:#666;">AIが会議データを分析しています...<br>しばらくお待ちください。</p>';
+      content.innerHTML = '<p style="text-align:center;">分析中...</p>';
 
       try {
-        // Just analyze (no end session here)
         const res = await fetch('/api/analyze-session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -303,55 +334,35 @@
           const r = data.data.analysis;
           const stats = data.data.stats;
           content.innerHTML = `
-                    <div style="margin-bottom:20px; padding:15px; background:#f0f4ff; border-radius:8px;">
-                        <h3 style="margin:0 0 10px 0; color:#4c51bf;">📊 統計サマリー</h3>
-                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:10px;">
-                            <div>参加者: <strong>${stats.participants}名</strong></div>
-                            <div>発言数: <strong>${stats.total}件</strong></div>
-                            <div>平均スコア: <strong>${stats.average.toFixed(2)}</strong></div>
-                            <div>ポジティブ率: <strong>${stats.positiveRate.toFixed(0)}%</strong></div>
-                        </div>
+                <div style="background:#f8f9fa; padding:15px; margin-bottom:20px; border-radius:4px;">
+                    <h3 style="margin-top:0;">統計</h3>
+                    <p>参加: ${stats.participants}名 / 発言: ${stats.total}件 / 平均スコア: ${stats.average.toFixed(2)}</p>
+                </div>
+                <h3>全体ムード</h3>
+                <p>${r.overallMood}</p>
+                
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+                    <div>
+                        <h4 style="color:#28a745;">良かった点</h4>
+                        <ul>${r.positiveHighlights.map(i => `<li>${i}</li>`).join('')}</ul>
                     </div>
+                    <div>
+                        <h4 style="color:#dc3545;">懸念点</h4>
+                        <ul>${r.concerns.map(i => `<li>${i}</li>`).join('')}</ul>
+                    </div>
+                </div>
 
-                    <div style="margin-bottom:20px;">
-                        <h3 style="color:#2d3748;">📝 全体ムード</h3>
-                        <p style="font-size:1.1rem; line-height:1.6;">${r.overallMood}</p>
-                    </div>
+                <h3>インサイト</h3>
+                <ul>${r.keyInsights.map(i => `<li>${i}</li>`).join('')}</ul>
 
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:20px;">
-                        <div style="background:#f0fff4; padding:15px; border-radius:8px;">
-                            <h4 style="margin:0 0 10px 0; color:#2f855a;">👍 Good Points</h4>
-                            <ul style="margin:0; padding-left:20px;">
-                                ${r.positiveHighlights.map(i => `<li>${i}</li>`).join('')}
-                            </ul>
-                        </div>
-                        <div style="background:#fff5f5; padding:15px; border-radius:8px;">
-                            <h4 style="margin:0 0 10px 0; color:#c53030;">⚠️ Concerns</h4>
-                            <ul style="margin:0; padding-left:20px;">
-                                ${r.concerns.map(i => `<li>${i}</li>`).join('')}
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div style="margin-bottom:20px;">
-                        <h3 style="color:#2d3748;">💡 Key Insights</h3>
-                        <ul style="line-height:1.6;">
-                            ${r.keyInsights.map(i => `<li>${i}</li>`).join('')}
-                        </ul>
-                    </div>
-
-                    <div style="background:#ebf8ff; padding:20px; border-radius:8px;">
-                        <h3 style="margin:0 0 10px 0; color:#2b6cb0;">🚀 Recommendations</h3>
-                        <ul style="margin:0; padding-left:20px; line-height:1.6;">
-                            ${r.recommendations.map(i => `<li><strong>${i}</strong></li>`).join('')}
-                        </ul>
-                    </div>
-                `;
+                <h3>改善提案</h3>
+                <ul>${r.recommendations.map(i => `<li>${i}</li>`).join('')}</ul>
+            `;
         } else {
-          content.innerHTML = `<p style="color:red; text-align:center;">エラー: ${data.error}</p>`;
+          content.innerHTML = `<p style="color:red;">エラー: ${data.error}</p>`;
         }
       } catch (e) {
-        content.innerHTML = `<p style="color:red; text-align:center;">通信エラーが発生しました</p>`;
+        content.innerHTML = `<p style="color:red;">通信エラー</p>`;
       }
     }
   </script>

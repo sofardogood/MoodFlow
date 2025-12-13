@@ -1,10 +1,10 @@
-# MoodFlow API 仕様書
+# 補佐やねん API 仕様書
 
-MoodFlowのバックエンドAPIの詳細仕様です。
+補佐やねんのバックエンドAPIの詳細仕様です。
 
 ## 概要
 
-MoodFlowは、Google Apps Script（GAS）で実装されたRESTful風APIを提供します。すべてのリクエストは `doPost()` 関数を通じて処理されます。
+補佐やねんは、Google Apps Script（GAS）で実装されたRESTful風APIを提供します。すべてのリクエストは `doPost()` 関数を通じて処理されます。
 
 ## エンドポイント
 

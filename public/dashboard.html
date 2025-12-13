@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MoodFlow - ダッシュボード</title>
+    <title>補佐やねん ダッシュボード</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@1.0.1/dist/chartjs-adapter-moment.min.js"></script>
@@ -12,8 +12,8 @@
     <script src="/checkAuth.js"></script>
     <style>
         body {
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background: #f5f7fa;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background: #f8f9fa;
             color: #333;
             margin: 0;
             padding: 0;
@@ -26,50 +26,62 @@
         header {
             padding: 15px 30px;
             background: white;
-            border-bottom: 1px solid #e0e0e0;
+            border-bottom: 1px solid #dee2e6;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-            gap: 15px;
-            flex-wrap: wrap;
         }
 
         h1 {
             margin: 0;
-            font-size: 1.5rem;
-            color: #667eea;
+            font-size: 20px;
+            font-weight: 500;
+            color: #212529;
         }
 
         .controls {
             display: flex;
             gap: 10px;
             align-items: center;
-            flex-wrap: wrap;
         }
 
         input[type="text"],
         select {
-            padding: 10px 12px;
-            border-radius: 6px;
-            border: 1px solid #ccc;
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid #ced4da;
             background: white;
-            color: #333;
+            color: #495057;
         }
 
         button {
-            padding: 10px 14px;
-            border-radius: 6px;
-            border: none;
-            background: #667eea;
-            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            border: 1px solid transparent;
+            font-size: 14px;
             cursor: pointer;
-            font-weight: bold;
-            transition: background 0.2s;
+            font-weight: 500;
         }
 
-        button:hover {
-            background: #5a67d8;
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-outline {
+            background: white;
+            border-color: #dee2e6;
+            color: #333;
         }
 
         main {
@@ -79,7 +91,7 @@
             padding: 20px;
             gap: 20px;
             overflow: hidden;
-            max-width: 1280px;
+            max-width: 1400px;
             margin: 0 auto;
             width: 100%;
         }
@@ -94,10 +106,10 @@
         .chart-container,
         .panel {
             background: white;
-            border-radius: 12px;
+            border-radius: 4px;
             padding: 20px;
             position: relative;
-            border: 1px solid #e2e8f0;
+            border: 1px solid #dee2e6;
         }
 
         .chart-container {
@@ -118,20 +130,21 @@
         }
 
         .stat-value {
-            font-size: 2.5rem;
+            font-size: 2rem;
             font-weight: bold;
-            color: #667eea;
+            color: #495057;
         }
 
         .stat-label {
-            font-size: 0.9rem;
-            color: #718096;
+            font-size: 0.85rem;
+            color: #6c757d;
         }
 
         h3 {
             margin: 0 0 15px 0;
-            font-size: 1.1rem;
-            color: #2d3748;
+            font-size: 16px;
+            color: #495057;
+            font-weight: 600;
         }
 
         .transcript-container {
@@ -141,13 +154,13 @@
 
         .transcript-item {
             padding: 8px 0;
-            border-bottom: 1px solid #f0f0f0;
+            border-bottom: 1px solid #f8f9fa;
         }
 
         .transcript-time {
-            color: #718096;
-            margin-right: 6px;
-            font-size: 0.85rem;
+            color: #aaa;
+            margin-right: 8px;
+            font-size: 0.8rem;
         }
 
         .modal {
@@ -157,7 +170,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.5);
             justify-content: center;
             align-items: center;
             z-index: 1000;
@@ -166,40 +179,47 @@
         .modal.active {
             display: flex;
         }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            font-size: 12px;
+            background: #e9ecef;
+            border-radius: 12px;
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 
 <body>
     <header>
-        <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-            <a href="admin.html" style="color: #667eea; text-decoration: none; font-size: 1rem;">← 管理画面</a>
-            <h1>MoodFlow ダッシュボード</h1>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <a href="admin.html" style="color: #6c757d; text-decoration: none; font-size: 14px;">&larr; 管理画面</a>
+            <h1>補佐やねん ダッシュボード</h1>
         </div>
         <div class="controls">
             <!-- Recording Controls -->
-            <button id="btnRecStart" onclick="startRecognition()"
-                style="background:#e53e3e; display: flex; align-items: center; gap:5px;">
-                <span style="font-size:1.2rem;">●</span> 録音開始
+            <button id="btnRecStart" onclick="startRecognition()" class="btn-primary" style="background:#dc3545;">
+                録音開始
             </button>
-            <button id="btnRecStop" onclick="stopRecognition()" style="background:#718096; display:none;">
-                ■ 停止
+            <button id="btnRecStop" onclick="stopRecognition()" class="btn-secondary" style="display:none;">
+                停止
             </button>
 
             <input type="text" id="sessionIdInput" placeholder="セッション名" value="demo-1" style="width:120px;">
 
-            <span style="border-left:1px solid #ddd; height:24px; margin:0 5px;"></span>
-
-            <div id="connectionStatus" style="font-size:0.8rem; color:#718096; margin-right:10px;">未接続</div>
-            <button onclick="connect()">再接続</button>
-            <button onclick="showSurveyQR()" style="background:#3182ce;">アンケートQR</button>
-            <div style="font-size:0.8rem; color:#718096; margin-left:10px;" id="recStatus"></div>
+            <div id="connectionStatus" style="font-size:0.8rem; color:#6c757d; margin: 0 10px;">未接続</div>
+            <button onclick="connect()" class="btn-outline">再接続</button>
+            <button onclick="showSurveyQR()" class="btn-primary">QRコード</button>
+            <div style="font-size:0.8rem; color:#6c757d; margin-left:10px;" id="recStatus"></div>
         </div>
     </header>
 
     <script>
         async function controlSession(action, silent = false) {
             const sid = document.getElementById('sessionIdInput').value;
-            if (!sid) return alert("セッションIDを入力してください");
+            if (!sid) return alert("セッション名を入力してください");
             try {
                 const res = await fetch(`/api/session?sessionId=${sid}`, {
                     method: 'POST',
@@ -214,15 +234,15 @@
     </script>
 
     <main>
-        <div class="panel" style="padding: 15px; background: #ebf8ff; border: 1px solid #bee3f8; margin-bottom: 0;">
-            <h3 style="margin: 0 0 10px 0; font-size: 1rem; color: #2c5282;">🤖 現在の議題リスト (AI抽出)</h3>
-            <div id="aiTopicsList"
-                style="font-weight: bold; color: #2a4365; display: flex; flex-wrap: wrap; gap: 15px;">
-                <span style="color:#a0aec0; font-weight:normal;">(会話が進むとここにトピックが表示されます...)</span>
+        <!-- AI Topics Panel -->
+        <div class="panel" style="padding: 15px; margin-bottom: 0;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0;">トピック (AI抽出)</h3>
+                <button onclick="fetchSummaries()" style="font-size:12px; padding:4px 8px;"
+                    class="btn-outline">更新</button>
             </div>
-            <div style="text-align:right; font-size:0.8rem; margin-top:5px;">
-                <button onclick="fetchSummaries()"
-                    style="padding:4px 8px; font-size:0.75rem; background:none; color:#3182ce; border:1px solid #bee3f8;">更新</button>
+            <div id="aiTopicsList" style="margin-top:10px;">
+                <span style="color:#adb5bd; font-size:14px;">(会話が進むとトピックが表示されます)</span>
             </div>
         </div>
 
@@ -231,13 +251,13 @@
                 <canvas id="moodChart"></canvas>
                 <div class="stats-overlay">
                     <div id="currentMood" class="stat-value">--</div>
-                    <div class="stat-label">現在の平均ムード</div>
+                    <div class="stat-label">現在のムード</div>
                     <div id="satisfaction" class="stat-label" style="margin-top:4px;">満足度: --</div>
                 </div>
             </div>
             <div class="panel transcript-container" id="transcriptList">
-                <h3>💬 リアルタイム文字起こし</h3>
-                <div style="text-align: center; color: #666; margin-top: 10px; font-size:0.9rem;">
+                <h3>ライブ文字起こし</h3>
+                <div style="text-align: center; color: #adb5bd; margin-top: 10px; font-size:0.9rem;">
                     録音を開始するとここに表示されます
                 </div>
             </div>
@@ -245,12 +265,12 @@
 
         <div class="grid" style="grid-template-columns: 1.2fr 0.8fr;">
             <div class="panel" id="questionPanel" style="max-height: 300px; overflow-y: auto;">
-                <h3>❓ 質問キュー</h3>
+                <h3>質問一覧</h3>
                 <div id="questionList" style="display:flex; flex-direction:column; gap:10px;"></div>
             </div>
             <div class="panel survey-container" id="surveyPanel" style="max-height: 300px;">
-                <h3>🙋‍♀️ アンケート</h3>
-                <div id="surveyStats" style="margin-bottom:10px;">満足度: --</div>
+                <h3>アンケート状況</h3>
+                <div id="surveyStats" style="margin-bottom:10px; font-weight:bold;">満足度: --</div>
                 <div id="surveyList" style="display:flex; flex-direction:column; gap:8px;"></div>
             </div>
         </div>
@@ -258,14 +278,14 @@
 
     <!-- QR MODAL -->
     <div id="qrModal" class="modal">
-        <div class="panel" style="width: 100%; max-width: 420px; text-align:center;">
-            <h3 style="margin-bottom: 10px;">アンケートQR</h3>
-            <canvas id="qrCanvas"
-                style="background:white; padding:10px; border-radius:12px; margin: 10px auto;"></canvas>
-            <div style="word-break: break-all; font-size:0.85rem; opacity:0.8;" id="shareLink"></div>
-            <div style="display:flex; gap:10px; margin-top:15px; justify-content:center;">
-                <button onclick="closeQRModal()" style="background:#718096;">閉じる</button>
-                <button onclick="copyShareLink()">リンクをコピー</button>
+        <div class="panel"
+            style="width: 100%; max-width: 400px; text-align:center; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+            <h3 style="margin-bottom: 15px;">アンケート共有</h3>
+            <canvas id="qrCanvas" style="background:white; padding:10px; margin: 10px auto;"></canvas>
+            <div style="word-break: break-all; font-size:12px; opacity:0.7; margin-bottom:15px;" id="shareLink"></div>
+            <div style="display:flex; gap:10px; justify-content:center;">
+                <button onclick="closeQRModal()" class="btn-secondary">閉じる</button>
+                <button onclick="copyShareLink()" class="btn-primary">リンクをコピー</button>
             </div>
         </div>
     </div>
@@ -337,8 +357,8 @@
         }
 
         function updateRecUI(recording) {
-            document.getElementById('btnRecStart').style.display = recording ? 'none' : 'flex';
-            document.getElementById('btnRecStop').style.display = recording ? 'flex' : 'none';
+            document.getElementById('btnRecStart').style.display = recording ? 'none' : 'inline-block';
+            document.getElementById('btnRecStop').style.display = recording ? 'inline-block' : 'none';
             document.getElementById('recStatus').innerText = recording ? "録音中..." : "";
         }
 
@@ -373,12 +393,24 @@
             const ctx = document.getElementById('moodChart').getContext('2d');
             chart = new Chart(ctx, {
                 type: 'line',
-                data: { datasets: [{ label: 'ムードスコア', data: [], borderColor: '#667eea', backgroundColor: 'rgba(102, 126, 234, 0.2)', borderWidth: 3, tension: 0.4, fill: true, pointRadius: 4, pointHoverRadius: 6 }] },
+                data: {
+                    datasets: [{
+                        label: 'ムードスコア',
+                        data: [],
+                        borderColor: '#212529', // Dark gray
+                        backgroundColor: 'rgba(33, 37, 41, 0.1)',
+                        borderWidth: 2,
+                        tension: 0, // Straighter lines
+                        fill: true,
+                        pointRadius: 0,
+                        pointHoverRadius: 4
+                    }]
+                },
                 options: {
                     responsive: true, maintainAspectRatio: false,
                     scales: {
-                        x: { type: 'time', time: { unit: 'second', displayFormats: { second: 'HH:mm:ss' } }, grid: { color: '#f0f0f0' }, ticks: { color: '#666' } },
-                        y: { min: -5.5, max: 5.5, grid: { color: '#f0f0f0' }, ticks: { color: '#666' } }
+                        x: { type: 'time', time: { unit: 'second', displayFormats: { second: 'HH:mm:ss' } }, grid: { color: '#f8f9fa' }, ticks: { color: '#adb5bd' } },
+                        y: { min: -5.5, max: 5.5, grid: { color: '#f8f9fa' }, ticks: { color: '#adb5bd' } }
                     },
                     plugins: { legend: { display: false } },
                     interaction: { intersect: false, mode: 'index' },
@@ -389,28 +421,27 @@
 
         function setStatus(msg, color) {
             const el = document.getElementById('connectionStatus');
-            if (el) { el.textContent = msg; el.style.color = color || '#718096'; }
+            if (el) { el.textContent = msg; el.style.color = color || '#6c757d'; }
         }
 
         function connect() {
             sessionId = (document.getElementById('sessionIdInput').value || 'demo-1').trim();
-            // Auto-start session
             if (typeof controlSession === 'function') controlSession('start', true);
 
             if (eventSource) eventSource.close();
             if (pollingInterval) clearInterval(pollingInterval);
 
-            setStatus("接続中...", "orange");
+            setStatus("接続中...", "#fd7e14");
 
             if (!!window.EventSource) {
                 eventSource = new EventSource(`/api/stream-visual-data?sessionId=${sessionId}`);
-                eventSource.onopen = () => setStatus("リアルタイム接続 (SSE)", "#38a169");
+                eventSource.onopen = () => setStatus("リアルタイム接続", "#28a745");
                 eventSource.addEventListener('update', e => {
                     const data = JSON.parse(e.data);
                     updateFromPayload(data);
                 });
                 eventSource.onerror = () => {
-                    setStatus("SSE切断 -> ポーリング", "red");
+                    setStatus("SSE切断 -> ポーリング", "#dc3545");
                     if (eventSource) eventSource.close();
                     startPolling();
                 };
@@ -422,7 +453,7 @@
         }
 
         function startPolling() {
-            setStatus("ポーリング接続 (1秒毎)", "#d69e2e");
+            setStatus("ポーリング接続", "#ffc107");
             fetchData();
             pollingInterval = setInterval(fetchData, 1000);
         }
@@ -435,14 +466,10 @@
             } catch (e) { console.error(e); }
         }
 
-        function goToSurvey() {
-            window.location.href = `survey.html?sessionId=${sessionId}`;
-        }
-
         function updateFromPayload(data) {
             if (!data) return;
 
-            // Chart (Dashboard is admin view, no session end redirect)
+            // Chart
             const moods = data.moods || [];
             console.log("Dashboard Update: Moods received:", moods.length, "Session:", sessionId);
             const points = moods.map(m => ({ x: m.timestamp, y: m.score }));
@@ -455,9 +482,9 @@
                 const avg = recent.reduce((sum, m) => sum + m.score, 0) / recent.length;
                 const el = document.getElementById('currentMood');
                 el.textContent = avg.toFixed(1);
-                if (avg > 0) el.style.color = '#38a169';
-                else if (avg < 0) el.style.color = '#e53e3e';
-                else el.style.color = '#718096';
+                if (avg > 0) el.style.color = '#28a745';
+                else if (avg < 0) el.style.color = '#dc3545';
+                else el.style.color = '#495057';
             }
 
             // Transcript
@@ -475,18 +502,14 @@
             let h3 = list.querySelector('h3');
             if (!h3) {
                 h3 = document.createElement('h3');
-                h3.textContent = '💬 リアルタイム文字起こし';
+                h3.textContent = 'ライブ文字起こし';
                 list.innerHTML = '';
                 list.appendChild(h3);
             }
 
-            // Keep transcripts visible even after recording stops (user request)
-
-            // Remove placeholder if exists
             const placeholder = Array.from(list.children).find(c => c.innerText && c.innerText.includes('録音を開始'));
             if (placeholder) placeholder.remove();
 
-            // Sort transcripts: oldest first
             const sorted = transcripts.slice().sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
             sorted.forEach(t => {
@@ -497,9 +520,14 @@
                     div.className = 'transcript-item';
                     div.innerHTML = `
                         <span class="transcript-time">${new Date(t.timestamp).toLocaleTimeString()}</span>
-                        <span class="transcript-text" style="font-weight:500;">${t.speaker}: ${t.text}</span>
+                        <span class="transcript-text">${t.text}</span>
                     `;
-                    // Insert after h3 (newest at top)
+                    // Insert after h3 (newest at top logic if needed, but append is standard for chat)
+                    // Let's prepend to see newest first? No, transcripts usually flow down. 
+                    // Let's stick to append but auto-scroll maybe? 
+                    // Actually previous logic was newest at top?
+                    // Previous logic: if(list.children.length > 1) { list.insertBefore(div, list.children[1]); }
+                    // Let's keep newest at top
                     if (list.children.length > 1) {
                         list.insertBefore(div, list.children[1]);
                     } else {
@@ -519,28 +547,26 @@
                     const lines = content.split('\n').filter(l => l.trim().startsWith('・') || l.trim().startsWith('-'));
                     const container = document.getElementById('aiTopicsList');
                     if (lines.length > 0) {
-                        container.innerHTML = lines.map(l => `<span style="background:white; padding:4px 10px; border-radius:15px; border:1px solid #cbd5e0;">${l}</span>`).join('');
+                        container.innerHTML = lines.map(l => `<span class="badge">${l}</span>`).join('');
                     } else {
-                        container.innerHTML = `<span style="color:#4a5568;">${content}</span>`;
+                        container.innerHTML = `<span style="font-size:14px;">${content}</span>`;
                     }
                 }
             } catch (e) { console.error(e); }
         }
 
-        function fetchSurvey() {
-            // Survey fetch placeholder
-        }
+        function fetchSurvey() { }
 
         function renderQuestions(questions) {
             const list = document.getElementById('questionList');
             if (!questions || questions.length === 0) {
-                list.innerHTML = '<div style="color:#718096;">質問はまだありません</div>';
+                list.innerHTML = '<div style="color:#adb5bd; font-size:14px;">質問なし</div>';
                 return;
             }
             list.innerHTML = questions.map(q => `
-                <div style="border:1px solid #edf2f7; border-radius:8px; padding:10px; display:flex; justify-content:space-between; gap:10px; align-items:center;">
-                    <div><div style="font-weight:600;">${q.text}</div></div>
-                    <button onclick="voteQuestion(${q.id})" style="background:#edf2f7; color:#2d3748; padding:8px 10px; border-radius:8px;">👍 ${q.voteCount}</button>
+                <div style="border:1px solid #ced4da; border-radius:4px; padding:10px; display:flex; justify-content:space-between; gap:10px; align-items:center;">
+                    <div style="font-size:14px;">${q.text}</div>
+                    <button onclick="voteQuestion(${q.id})" style="background:#e9ecef; color:#333; padding:4px 8px; font-size:12px;">👍 ${q.voteCount}</button>
                 </div>`).join('');
         }
 
@@ -560,7 +586,7 @@
         if (params.get('sessionId')) document.getElementById('sessionIdInput').value = params.get('sessionId');
 
         connect();
-        setInterval(fetchSummaries, 60000); // Update topics every minute
+        setInterval(fetchSummaries, 60000); 
     </script>
 </body>
 
