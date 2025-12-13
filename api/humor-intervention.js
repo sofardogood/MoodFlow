@@ -13,15 +13,14 @@ module.exports = async (req, res) => {
         const result = await orchestrator.intervene(context);
 
         // Log the intervention to DB for future learning (non-blocking)
-        // Note: successRating is null initially, to be updated later based on user feedback or mood improvement
         let interventionId = null;
         try {
             const log = await prisma.interventionLog.create({
                 data: {
                     sessionId: sessionId || null,
                     context: context,
-                    dialogue: JSON.stringify(result.dialogue),
-                    suggestion: result.suggestion.text || "",
+                    dialogue: result.advice, // Store advice as dialogue field
+                    suggestion: result.warning,
                     successRating: null
                 }
             });
@@ -32,8 +31,13 @@ module.exports = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            interventionId: interventionId, // For rating later
-            data: result
+            interventionId: interventionId,
+            data: {
+                dialect: result.dialect,
+                agentUsed: result.agentUsed,
+                advice: result.advice,
+                warning: result.warning
+            }
         });
 
     } catch (error) {

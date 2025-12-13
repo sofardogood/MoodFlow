@@ -2,7 +2,7 @@
 
 ## 概要
 
-会議のムードが低下した際に、AIエージェント間の対話を通じて適切な介入提案を生成するシステムです。
+会議のムードが低下した際に、ホストエージェントが会議の言語スタイル（関西弁 or 標準語）を検出し、適切なエージェントにアドバイスを求め、短い警告メッセージとして発表者に提示するシステムです。
 
 ## アーキテクチャ
 
@@ -10,16 +10,25 @@
 ┌─────────────────────────────────────────────────────────────────┐
 │                    HumorOrchestrator                            │
 ├─────────────────────────────────────────────────────────────────┤
-│  HostAgent (MC)                                                 │
-│    └─ 状況を分析し、どのエージェントが先に話すか決定           │
+│  HostAgent (分析・ルーティング)                                  │
+│    1. 会議の言語スタイル（方言）を検出                          │
+│    2. 適切なエージェントを選択                                  │
+│    3. エージェントのアドバイスを短い警告に要約                  │
 │                                                                 │
-│  KansaiAgent (ボケ役)                                           │
-│    └─ 関西弁でユーモアを交えた発言                             │
+│  関西エージェント (Kansai)                                       │
+│    └─ 関西弁での親しみやすいアドバイス                         │
 │                                                                 │
-│  KantoAgent (ツッコミ役)                                        │
-│    └─ 標準語で冷静なフォロー                                   │
+│  関東エージェント (Kanto)                                        │
+│    └─ 標準語での丁寧なアドバイス                               │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+## フロー
+
+1. **方言検出**: HostAgentが会議の発言内容から言語スタイルを判定
+2. **エージェント選択**: 関西弁 → 関西エージェント、標準語 → 関東エージェント
+3. **アドバイス生成**: 選択されたエージェントが改善提案を生成
+4. **警告作成**: HostAgentがアドバイスを1〜2文の短い警告メッセージに要約
 
 ## API エンドポイント
 
@@ -30,7 +39,7 @@ POST /api/humor-intervention
 Content-Type: application/json
 
 {
-  "context": "会議で参加者のムードが下がっている",
+  "context": "会議の文字起こしや状況説明",
   "sessionId": "session-123"  // オプション
 }
 ```
@@ -41,13 +50,10 @@ Content-Type: application/json
   "success": true,
   "interventionId": 4,
   "data": {
-    "dialogue": [
-      { "agent": "KansaiAgent", "content": "なんやなんや..." },
-      { "agent": "KantoAgent", "content": "確かに..." }
-    ],
-    "suggestion": {
-      "text": "アクション: ...\nセリフ: 「...」"
-    }
+    "dialect": "kansai",
+    "agentUsed": "関西エージェント",
+    "advice": "ちょっと空気重いなぁ。ここで一回...",
+    "warning": "⚠️ 参加者の反応が薄いです。『質問ある人〜？』と明るく聞いてみましょう！"
   }
 }
 ```
@@ -64,59 +70,11 @@ Content-Type: application/json
 }
 ```
 
-## 学習メカニズム
-
-現在の実装は **RAG（Retrieval-Augmented Generation）** 方式です：
-
-1. 介入実行時に `InterventionLog` テーブルにログを保存
-2. 次回の介入時、`successRating >= 4` の過去事例を3件取得
-3. 過去の成功事例をプロンプトに含めてAIに参照させる
-
-### データベーススキーマ
-
-```sql
-CREATE TABLE "InterventionLog" (
-    id SERIAL PRIMARY KEY,
-    "sessionId" VARCHAR(255),
-    context TEXT NOT NULL,
-    dialogue TEXT NOT NULL,
-    suggestion TEXT NOT NULL,
-    "successRating" INTEGER,  -- 1-5, null=未評価
-    "createdAt" TIMESTAMP DEFAULT NOW()
-);
-```
-
-## ファイル構成
-
-```
-api/
-├── humor-intervention.js   # 介入API
-├── rate-intervention.js    # 評価API
-lib/
-├── humor-agents.js         # エージェント定義
-├── search-service.js       # ウェブ検索連携
-```
-
 ## 環境変数
 
 | 変数名 | 必須 | 説明 |
 |--------|------|------|
 | `GEMINI_API_KEY` | ✅ | Gemini API キー |
-| `GOOGLE_SEARCH_ENGINE_ID` | ❌ | 検索連携用（設定すると最新ニュースを参照） |
-
-## 将来の拡張（未実装）
-
-### 本格的なファインチューニング
-
-現在のRAG方式から、OpenAI Fine-tuning APIを使用した本格的なファインチューニングへの移行が可能です：
-
-1. 成功事例データをJSONL形式でエクスポート
-2. OpenAI Fine-tuning APIでカスタムモデルを作成
-3. カスタムモデルを使用して提案を生成
-
-**必要なもの:**
-- OpenAI APIキー（課金必要）
-- 最低10件以上の高評価事例データ
 
 ## 使用例
 
@@ -124,13 +82,6 @@ lib/
 ```powershell
 $response = Invoke-RestMethod -Uri "http://localhost:3000/api/humor-intervention" `
   -Method POST -ContentType "application/json" `
-  -Body '{"context": "参加者が眠そうにしている"}'
+  -Body '{"context": "えー、ほな次のスライドいきますわ。みなさん眠そうやなぁ..."}'
 $response | ConvertTo-Json -Depth 10
-```
-
-### cURL
-```bash
-curl -X POST http://localhost:3000/api/humor-intervention \
-  -H "Content-Type: application/json" \
-  -d '{"context": "参加者が眠そうにしている"}'
 ```
