@@ -125,3 +125,13 @@ model Highlight {
   createdAt  DateTime @default(now())
   session    Session  @relation(fields: [sessionId], references: [id])
 }
+
+model InterventionLog {
+  id          Int      @id @default(autoincrement())
+  sessionId   String?
+  context     String   // 介入時の状況説明
+  dialogue    String   // エージェント間の対話ログ (JSON string)
+  suggestion  String   // 最終的な提案内容
+  successRating Int?   // 1-5: 効果があったかどうか（後で評価）
+  createdAt   DateTime @default(now())
+}

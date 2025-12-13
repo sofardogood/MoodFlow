@@ -57,6 +57,8 @@ app.get('/api/get-summaries', handle(require('./api/get-summaries')));
 app.post('/api/analyze-session', handle(require('./api/analyze-session')));
 app.get('/api/cron-generate-reports', handle(require('./api/cron-generate-reports')));
 app.all('/api/session', handle(require('./api/session')));
+app.post('/api/humor-intervention', handle(require('./api/humor-intervention')));
+app.post('/api/rate-intervention', handle(require('./api/rate-intervention')));
 
 const http = require('http');
 const { Server } = require('socket.io');
