@@ -13,7 +13,6 @@
         body {
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background: #f5f7fa;
-            /* White/Light Theme */
             color: #333;
             margin: 0;
             padding: 0;
@@ -31,6 +30,8 @@
             justify-content: space-between;
             align-items: center;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+            gap: 15px;
+            flex-wrap: wrap;
         }
 
         h1 {
@@ -41,11 +42,13 @@
 
         .controls {
             display: flex;
-            gap: 15px;
+            gap: 10px;
             align-items: center;
+            flex-wrap: wrap;
         }
 
-        input[type="text"] {
+        input[type="text"],
+        select {
             padding: 10px 12px;
             border-radius: 6px;
             border: 1px solid #ccc;
@@ -54,7 +57,7 @@
         }
 
         button {
-            padding: 10px 20px;
+            padding: 10px 14px;
             border-radius: 6px;
             border: none;
             background: #667eea;
@@ -75,43 +78,49 @@
             padding: 20px;
             gap: 20px;
             overflow: hidden;
-            max-width: 1200px;
+            max-width: 1280px;
             margin: 0 auto;
             width: 100%;
         }
 
-        .chart-container {
-            flex: 2;
+        .grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            min-height: 0;
+        }
+
+        .chart-container,
+        .panel {
             background: white;
             border-radius: 12px;
             padding: 20px;
             position: relative;
-            min-height: 0;
             border: 1px solid #e2e8f0;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
         }
 
-        .transcript-container {
-            flex: 1;
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
+        .chart-container {
+            min-height: 320px;
+        }
+
+        .transcript-container,
+        .summary-container,
+        .survey-container {
             overflow-y: auto;
-            border-top: 4px solid #667eea;
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            max-height: 420px;
         }
 
         .transcript-item {
             padding: 10px;
             border-bottom: 1px solid #f0f0f0;
-            animation: fadeIn 0.5s ease;
+            animation: fadeIn 0.4s ease;
         }
 
         @keyframes fadeIn {
             from {
                 opacity: 0;
-                transform: translateY(10px);
+                transform: translateY(8px);
             }
 
             to {
@@ -126,9 +135,29 @@
             margin-right: 10px;
         }
 
-        .transcript-text {
-            font-size: 1.1rem;
-            color: #333;
+        .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            margin-left: 6px;
+            color: white;
+        }
+
+        .tag.decision {
+            background: #38b2ac;
+        }
+
+        .tag.concern {
+            background: #e53e3e;
+        }
+
+        .tag.idea {
+            background: #ed8936;
+        }
+
+        .tag.other {
+            background: #718096;
         }
 
         .stats-overlay {
@@ -153,46 +182,96 @@
             font-size: 0.8rem;
             color: #666;
         }
+
+        .panel h3 {
+            margin-top: 0;
+            color: #2d3748;
+            font-size: 1.1rem;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 8px;
+        }
+
+        .pill {
+            background: #edf2f7;
+            padding: 6px 10px;
+            border-radius: 10px;
+            display: inline-block;
+            margin-right: 6px;
+            font-size: 0.85rem;
+        }
     </style>
 </head>
 
 <body>
 
     <header>
-        <div style="display: flex; align-items: center; gap: 15px;">
-            <a href="admin.html" style="color: #667eea; text-decoration: none; font-size: 1.2rem;">← 管理画面</a>
+        <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+            <a href="admin.html" style="color: #667eea; text-decoration: none; font-size: 1rem;">← 管理画面</a>
             <h1>MoodFlow ダッシュボード</h1>
         </div>
         <div class="controls">
             <input type="text" id="sessionIdInput" placeholder="セッションID" value="demo-1">
-            <button onclick="updateSession()">接続</button>
+            <select id="analysisLang">
+                <option value="ja">日本語</option>
+                <option value="en">English</option>
+            </select>
+            <button onclick="connect()">接続</button>
+            <button onclick="refreshAnalysis()" style="background:#ed8936;">AI分析を更新</button>
         </div>
     </header>
 
     <main>
-        <div class="chart-container">
-            <canvas id="moodChart"></canvas>
-            <div class="stats-overlay">
-                <div id="currentMood" class="stat-value">--</div>
-                <div class="stat-label">現在の平均ムード</div>
+        <div class="grid">
+            <div class="chart-container">
+                <canvas id="moodChart"></canvas>
+                <div class="stats-overlay">
+                    <div id="currentMood" class="stat-value">--</div>
+                    <div class="stat-label">現在の平均ムード</div>
+                    <div id="satisfaction" class="stat-label" style="margin-top:4px;">満足度: --</div>
+                </div>
+            </div>
+            <div class="panel summary-container" id="summaryList">
+                <h3>🧠 AI要約 (5分刻み)</h3>
+                <div style="text-align: center; color: #a0aec0; margin-top: 10px;">
+                    まだ要約はありません...
+                </div>
             </div>
         </div>
 
-        <div class="bottom-panel" style="display: flex; gap: 20px; flex: 1; min-height: 0;">
-            <div class="transcript-container" id="transcriptList" style="flex: 1;">
-                <div style="text-align: center; color: #666; margin-top: 20px;">
-                    リアルタイムで発言を待機中...
+        <div class="grid" style="grid-template-columns: 1.2fr 0.8fr;">
+            <div class="panel transcript-container" id="transcriptList">
+                <h3>💬 コメント / 発言</h3>
+                <div style="text-align: center; color: #666; margin-top: 10px;">リアルタイムで発言を収集中...</div>
+            </div>
+            <div class="panel survey-container" id="surveyPanel">
+                <h3>🙋‍♀️ アンケート</h3>
+                <div id="surveyStats" style="margin-bottom:10px;">満足度: --</div>
+                <div id="surveyList" style="display:flex; flex-direction:column; gap:8px;"></div>
+            </div>
+        </div>
+
+        <div class="grid" style="grid-template-columns: 1fr 1fr;">
+            <div class="panel" id="questionPanel">
+                <h3>❓ 質問キュー</h3>
+                <div id="questionList" style="display:flex; flex-direction:column; gap:10px;"></div>
+            </div>
+            <div class="panel" id="highlightPanel">
+                <h3>⭐ ハイライト</h3>
+                <div id="highlightList" style="display:flex; flex-direction:column; gap:10px;"></div>
+            </div>
+        </div>
+
+        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+            <div class="panel" id="facilitatorView">
+                <h3>🎛 ファシリ用ビュー</h3>
+                <div id="facilitatorContent" style="color:#2d3748;">AI分析を更新してください。</div>
+                <div id="liveSuggestions" style="margin-top:10px; color:#2d3748; font-size:0.95rem;">
+                    リアルタイム介入ヒントを取得中...
                 </div>
             </div>
-
-            <div class="summary-container" id="summaryList"
-                style="flex: 1; background: white; border-radius: 12px; padding: 20px; overflow-y: auto; border-top: 4px solid #48bb78; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-                <h3
-                    style="margin-top: 0; color: #2f855a; font-size: 1.1rem; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px;">
-                    🤖 AI要約 (5分毎)</h3>
-                <div style="text-align: center; color: #a0aec0; margin-top: 20px;">
-                    まだ要約はありません...
-                </div>
+            <div class="panel" id="execView">
+                <h3>📈 経営層ビュー</h3>
+                <div id="execContent" style="color:#2d3748;">AI分析を更新してください。</div>
             </div>
         </div>
     </main>
@@ -200,68 +279,55 @@
     <script>
         let sessionId = 'demo-1';
         let chart;
+        let eventSource;
         let pollingInterval;
 
-        // Initialize Chart
         function initChart() {
             const ctx = document.getElementById('moodChart').getContext('2d');
-
             chart = new Chart(ctx, {
                 type: 'line',
-                data: {
-                    datasets: [{
-                        label: 'ムードスコア',
-                        data: [],
-                        borderColor: '#667eea',
-                        backgroundColor: 'rgba(102, 126, 234, 0.2)',
-                        borderWidth: 3,
-                        tension: 0.4,
-                        fill: true,
-                        pointRadius: 4,
-                        pointHoverRadius: 6
-                    }]
-                },
+                data: { datasets: [{ label: 'ムードスコア', data: [], borderColor: '#667eea', backgroundColor: 'rgba(102, 126, 234, 0.2)', borderWidth: 3, tension: 0.4, fill: true, pointRadius: 4, pointHoverRadius: 6 }] },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        x: {
-                            type: 'time',
-                            time: {
-                                unit: 'second',
-                                displayFormats: { second: 'HH:mm:ss' }
-                            },
-                            grid: { color: '#f0f0f0' },
-                            ticks: { color: '#666' }
-                        },
-                        y: {
-                            min: -5.5,
-                            max: 5.5,
-                            grid: { color: '#f0f0f0' },
-                            ticks: { color: '#666' }
-                        }
+                        x: { type: 'time', time: { unit: 'second', displayFormats: { second: 'HH:mm:ss' } }, grid: { color: '#f0f0f0' }, ticks: { color: '#666' } },
+                        y: { min: -5.5, max: 5.5, grid: { color: '#f0f0f0' }, ticks: { color: '#666' } }
                     },
-                    plugins: {
-                        legend: { display: false }
-                    },
-                    interaction: {
-                        intersect: false,
-                        mode: 'index',
-                    },
+                    plugins: { legend: { display: false } },
+                    interaction: { intersect: false, mode: 'index' },
                 }
             });
         }
 
-        function updateSession() {
+        function connect() {
             sessionId = document.getElementById('sessionIdInput').value || 'demo-1';
-            // Clear existing data
+            if (eventSource) eventSource.close();
+            if (pollingInterval) clearInterval(pollingInterval);
             chart.data.datasets[0].data = [];
             chart.update();
             document.getElementById('transcriptList').innerHTML = '';
 
-            // Restart poling
-            if (pollingInterval) clearInterval(pollingInterval);
-            fetchData(); // Immediate
+            if (!!window.EventSource) {
+                eventSource = new EventSource(`/api/stream-visual-data?sessionId=${sessionId}`);
+                eventSource.addEventListener('update', e => {
+                    const data = JSON.parse(e.data);
+                    updateFromPayload(data);
+                });
+                eventSource.onerror = () => {
+                    // fallback to polling
+                    if (eventSource) eventSource.close();
+                    startPolling();
+                };
+            } else {
+                startPolling();
+            }
+            fetchSummaries();
+            fetchSurvey();
+        }
+
+        function startPolling() {
+            fetchData();
             pollingInterval = setInterval(fetchData, 3000);
         }
 
@@ -269,58 +335,63 @@
             try {
                 const res = await fetch(`/api/get-visual-data?sessionId=${sessionId}`);
                 const data = await res.json();
+                updateFromPayload(data);
+            } catch (e) { console.error(e); }
+        }
 
-                updateChart(data.moods);
-                updateTranscripts(data.transcripts);
-                fetchSummaries();
+        function updateFromPayload(data) {
+            if (!data) return;
+            const moods = data.moods || [];
+            const transcripts = data.transcripts || [];
+            updateChart(moods);
 
-            } catch (e) {
-                console.error("Fetch error", e);
-            }
+            const moodComments = moods
+                .filter(m => m.comment && m.comment.trim() !== '')
+                .map(m => ({
+                    timestamp: m.timestamp,
+                    text: m.comment,
+                    translatedComment: m.translatedComment,
+                    tag: m.tag,
+                    source: 'mood'
+                }));
+
+            const combined = [...transcripts, ...moodComments].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            updateTranscripts(combined);
+            if (data.questions) renderQuestions(data.questions);
+            if (data.highlights) renderHighlights(data.highlights);
         }
 
         function updateChart(moods) {
-            const points = moods.map(m => ({
-                x: m.timestamp,
-                y: m.score
-            }));
-
+            const points = moods.map(m => ({ x: m.timestamp, y: m.score }));
             chart.data.datasets[0].data = points;
             chart.update('none');
 
-            // Update current mood stat
             if (moods.length > 0) {
                 const recent = moods.slice(-5);
                 const avg = recent.reduce((sum, m) => sum + m.score, 0) / recent.length;
                 const el = document.getElementById('currentMood');
                 el.textContent = avg.toFixed(1);
-
-                // Color tweaks for white bg
-                if (avg > 0) el.style.color = '#38a169'; // Green
-                else if (avg < 0) el.style.color = '#e53e3e'; // Red
-                else el.style.color = '#718096'; // Gray
+                if (avg > 0) el.style.color = '#38a169';
+                else if (avg < 0) el.style.color = '#e53e3e';
+                else el.style.color = '#718096';
             }
         }
 
         function updateTranscripts(transcripts) {
             const list = document.getElementById('transcriptList');
-            const currentCount = list.getElementsByClassName('transcript-item').length;
-
-            if (transcripts.length > currentCount) {
-                const newItems = transcripts.slice(currentCount);
-
-                if (currentCount === 0 && newItems.length > 0) list.innerHTML = '';
-
-                newItems.forEach(t => {
-                    const div = document.createElement('div');
-                    div.className = 'transcript-item';
-                    div.innerHTML = `
-          <span class="transcript-time">${new Date(t.timestamp).toLocaleTimeString()}</span>
-          <span class="transcript-text">${t.text}</span>
-        `;
-                    list.prepend(div);
-                });
-            }
+            list.innerHTML = '';
+            transcripts.slice().reverse().forEach(t => {
+                const div = document.createElement('div');
+                div.className = 'transcript-item';
+                const tag = t.tag || 'other';
+                div.innerHTML = `
+                    <span class="transcript-time">${new Date(t.timestamp).toLocaleTimeString()}</span>
+                    <span class="transcript-text">${t.text || t.comment || ''}</span>
+                    ${t.tag ? `<span class="tag ${tag}">${tag}</span>` : ''}
+                    ${t.translatedComment ? `<div style="font-size:0.85rem; color:#718096; margin-top:4px;">${t.translatedComment}</div>` : ''}
+                `;
+                list.prepend(div);
+            });
         }
 
         async function fetchSummaries() {
@@ -329,10 +400,9 @@
                 const data = await res.json();
                 if (data.success && data.summaries.length > 0) {
                     const list = document.getElementById('summaryList');
-                    // Simple rebuild for summaries as they are infrequent
                     const html = data.summaries.map(s => `
-                        <div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed #e2e8f0;">
-                            <div style="font-size: 0.8rem; color: #718096; margin-bottom: 5px;">
+                        <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed #e2e8f0;">
+                            <div style="font-size: 0.8rem; color: #718096; margin-bottom: 4px;">
                                 ${new Date(s.startTime).toLocaleTimeString()} - ${new Date(s.endTime).toLocaleTimeString()}
                             </div>
                             <div style="font-size: 0.95rem; line-height: 1.6; color: #2d3748;">
@@ -340,26 +410,138 @@
                             </div>
                         </div>
                     `).join('');
-
-                    if (list.innerHTML !== html) { // basic diff
-                        list.innerHTML = `<h3 style="margin-top: 0; color: #2f855a; font-size: 1.1rem; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px;">🤖 AI要約 (5分毎)</h3>` + html;
-                    }
+                    list.innerHTML = `<h3>🧠 AI要約 (5分刻み)</h3>` + html;
                 }
             } catch (e) { console.error(e); }
         }
 
-        // Init
-        initChart();
+        async function fetchSurvey() {
+            try {
+                const res = await fetch(`/api/get-survey?sessionId=${sessionId}`);
+                const data = await res.json();
+                if (!data.success) return;
+                const stats = data.stats || {};
+                document.getElementById('satisfaction').textContent = `満足度: ${stats.avgSatisfaction ? stats.avgSatisfaction.toFixed(2) : '--'}`;
+                document.getElementById('surveyStats').textContent = `回答数: ${stats.count || 0} / 平均満足度: ${stats.avgSatisfaction ? stats.avgSatisfaction.toFixed(2) : '--'}`;
+                const list = document.getElementById('surveyList');
+                list.innerHTML = data.responses.map(r => `
+                    <div style="padding:10px; border:1px solid #edf2f7; border-radius:8px;">
+                        <div class="pill">${r.role || 'N/A'}</div>
+                        <div class="pill">満足度: ${r.satisfaction ?? '-'}</div>
+                        <div style="margin-top:6px; color:#2d3748;">${r.positive || ''}</div>
+                        <div style="margin-top:4px; color:#c53030;">${r.improvement || ''}</div>
+                    </div>
+                `).join('');
+            } catch (e) { console.error(e); }
+        }
 
-        // Auto-load from URL
+        function renderQuestions(questions) {
+            const list = document.getElementById('questionList');
+            if (!questions || questions.length === 0) {
+                list.innerHTML = '<div style="color:#718096;">質問はまだありません</div>';
+                return;
+            }
+            list.innerHTML = questions.map(q => `
+                <div style="border:1px solid #edf2f7; border-radius:8px; padding:10px; display:flex; justify-content:space-between; gap:10px; align-items:center;">
+                    <div>
+                        <div style="font-weight:600;">${q.text}</div>
+                        <div style="font-size:0.8rem; color:#718096;">${new Date(q.createdAt).toLocaleTimeString()} / ${q.status}</div>
+                    </div>
+                    <button onclick="voteQuestion(${q.id})" style="background:#edf2f7; color:#2d3748; padding:8px 10px; border-radius:8px; border:1px solid #e2e8f0;">👍 ${q.voteCount}</button>
+                </div>
+            `).join('');
+        }
+
+        async function voteQuestion(id) {
+            try {
+                await fetch('/api/questions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'vote', questionId: id, sessionId })
+                });
+                fetchData();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function renderHighlights(highlights) {
+            const list = document.getElementById('highlightList');
+            if (!highlights || highlights.length === 0) {
+                list.innerHTML = '<div style="color:#718096;">ハイライトはまだありません</div>';
+                return;
+            }
+            list.innerHTML = highlights.map(h => `
+                <div style="border:1px solid #edf2f7; border-radius:8px; padding:10px;">
+                    <div style="font-size:0.9rem; color:#2d3748;">${h.text}</div>
+                    <div style="font-size:0.8rem; color:#718096; margin-top:4px;">${h.tag || 'タグなし'} / ${new Date(h.createdAt).toLocaleTimeString()}</div>
+                </div>
+            `).join('');
+        }
+
+        async function refreshAnalysis() {
+            try {
+                const lang = document.getElementById('analysisLang').value;
+                const res = await fetch('/api/analyze-session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId, targetLanguage: lang })
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    alert('AI分析に失敗しました: ' + data.error);
+                    return;
+                }
+                renderAnalysis(data.data.analysis);
+            } catch (e) {
+                console.error(e);
+                alert('AI分析でエラーが発生しました');
+            }
+        }
+
+        function renderAnalysis(analysis) {
+            if (!analysis) return;
+            const fac = document.getElementById('facilitatorContent');
+            fac.innerHTML = `
+                <div style="margin-bottom:8px;">${analysis.overallMood || ''}</div>
+                <div><strong>介入ヒント:</strong><br>${(analysis.facilitatorCues || []).map(i => `• ${i}`).join('<br>')}</div>
+                <div style="margin-top:8px;"><strong>懸念:</strong><br>${(analysis.concerns || []).map(i => `• ${i}`).join('<br>')}</div>
+            `;
+            const exec = document.getElementById('execContent');
+            exec.innerHTML = `
+                <div style="margin-bottom:8px;">${analysis.executiveSummary || ''}</div>
+                <div><strong>Key Insights:</strong><br>${(analysis.keyInsights || []).map(i => `• ${i}`).join('<br>')}</div>
+                <div style="margin-top:8px;"><strong>Next Actions:</strong><br>${(analysis.recommendations || []).map(i => `• ${i}`).join('<br>')}</div>
+            `;
+        }
+
+        async function fetchInterventions() {
+            try {
+                const res = await fetch(`/api/interventions?sessionId=${sessionId}`);
+                const data = await res.json();
+                if (!data.success) return;
+                const tips = data.suggestions || [];
+                const el = document.getElementById('liveSuggestions');
+                if (!el) return;
+                if (!tips.length) {
+                    el.textContent = '介入ヒントはまだありません';
+                } else {
+                    el.innerHTML = `<strong>リアルタイム介入ヒント:</strong><br>${tips.map(t => `• ${t}`).join('<br>')}`;
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        initChart();
         const params = new URLSearchParams(window.location.search);
         const urlSessionId = params.get('sessionId');
         if (urlSessionId) {
             document.getElementById('sessionIdInput').value = urlSessionId;
-            updateSession();
-        } else {
-            updateSession();
         }
+        connect();
+        fetchInterventions();
+        setInterval(fetchInterventions, 15000);
     </script>
 </body>
 

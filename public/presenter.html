@@ -10,7 +10,6 @@
         body {
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background: #f5f7fa;
-            /* White/Light Gray theme */
             color: #333;
             margin: 0;
             padding: 20px;
@@ -22,8 +21,8 @@
 
         .container {
             width: 100%;
-            max-width: 800px;
-            margin-top: 50px;
+            max-width: 840px;
+            margin-top: 30px;
         }
 
         .card {
@@ -46,18 +45,19 @@
             margin-bottom: 20px;
             justify-content: center;
             align-items: center;
+            flex-wrap: wrap;
         }
 
         input[type="text"] {
             padding: 12px;
             border-radius: 6px;
             border: 1px solid #ccc;
-            width: 200px;
+            width: 220px;
             font-size: 1rem;
         }
 
         button {
-            padding: 12px 24px;
+            padding: 12px 20px;
             border-radius: 30px;
             border: none;
             font-weight: bold;
@@ -76,12 +76,12 @@
             color: white;
         }
 
-        .btn-start:disabled {
-            background: #e0e0e0;
-            color: #888;
-            cursor: not-allowed;
+        .btn-secondary {
+            background: #667eea;
+            color: white;
         }
 
+        .btn-start:disabled,
         .btn-stop:disabled {
             background: #e0e0e0;
             color: #888;
@@ -126,22 +126,27 @@
 
     <div class="container">
         <div style="margin-bottom: 10px;">
-            <a href="admin.html" style="color: #667eea; text-decoration: none; font-size: 1rem;">← 管理画面に戻る</a>
+            <a href="admin.html" style="color: #667eea; text-decoration: none; font-size: 1rem;">← 管理画面へ戻る</a>
         </div>
-        <h1>🎙 プレゼンターモード</h1>
+        <h1>🗣️ プレゼンター 音声/メモ送信</h1>
 
         <div class="card">
             <div class="controls">
                 <input type="text" id="sessionId" placeholder="セッションID" value="demo-1">
-                <button id="btnStart" class="btn-start" onclick="startRecognition()">記録開始</button>
+                <button id="btnStart" class="btn-start" onclick="startRecognition()">録音開始</button>
                 <button id="btnStop" class="btn-stop" onclick="stopRecognition()" disabled>停止</button>
             </div>
 
-            <div id="status">準備完了</div>
+            <div id="status">待機中</div>
+
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+                <input type="text" id="quickNote" placeholder="手動メモを入力 (Enterで送信)" style="flex:1; min-width:220px;">
+                <button class="btn-secondary" onclick="sendManualNote()">メモ送信</button>
+            </div>
 
             <div id="transcriptLog">
                 <div style="opacity: 0.5; text-align: center; margin-top: 100px;">
-                    開始ボタンを押して音声認識を始めてください...
+                    音声を開始するとここに表示されます...
                 </div>
             </div>
         </div>
@@ -152,7 +157,6 @@
         let isRecognizing = false;
         let sessionId = 'demo-1';
 
-        // Auto-fill from URL
         window.onload = function () {
             const params = new URLSearchParams(window.location.search);
             const urlSessionId = params.get('sessionId');
@@ -160,41 +164,44 @@
                 document.getElementById('sessionId').value = urlSessionId;
                 sessionId = urlSessionId;
             }
+            initSpeech();
+            document.getElementById('quickNote').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    sendManualNote();
+                }
+            });
         };
 
-        function init() {
+        function initSpeech() {
             if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                alert("このブラウザはWeb Speech APIをサポートしていません。Chromeを使用してください。");
+                alert("お使いのブラウザは音声認識に対応していません。Chromeでお試しください。");
                 return;
             }
 
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognition = new SpeechRecognition();
-            recognition.lang = 'ja-JP'; // Japanese
+            recognition.lang = 'ja-JP';
             recognition.continuous = true;
             recognition.interimResults = false;
 
             recognition.onstart = function () {
                 isRecognizing = true;
-                document.getElementById('status').innerText = "🔴 録音中...";
-                document.getElementById('status').style.color = "red";
-                document.getElementById('btnStart').disabled = true;
-                document.getElementById('btnStop').disabled = false;
+                setStatus("録音中...", "red");
+                toggleButtons(true);
             };
 
             recognition.onend = function () {
                 isRecognizing = false;
-                document.getElementById('status').innerText = "停止中";
-                document.getElementById('status').style.color = "#666";
-                document.getElementById('btnStart').disabled = false;
-                document.getElementById('btnStop').disabled = true;
+                setStatus("停止", "#666");
+                toggleButtons(false);
             };
 
             recognition.onresult = async function (event) {
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
                     if (event.results[i].isFinal) {
                         const text = event.results[i][0].transcript;
-                        addLog("あなた", text);
+                        addLog("Speaker", text);
                         await sendTranscript(text);
                     }
                 }
@@ -202,13 +209,24 @@
 
             recognition.onerror = function (event) {
                 console.error("Speech Error", event.error);
-                document.getElementById('status').innerText = "エラー: " + event.error;
+                setStatus("エラー: " + event.error, "#e53e3e");
             };
+        }
+
+        function toggleButtons(recording) {
+            document.getElementById('btnStart').disabled = recording;
+            document.getElementById('btnStop').disabled = !recording;
+        }
+
+        function setStatus(text, color) {
+            const el = document.getElementById('status');
+            el.innerText = text;
+            el.style.color = color;
         }
 
         function startRecognition() {
             sessionId = document.getElementById('sessionId').value || 'demo-1';
-            if (!recognition) init();
+            if (!recognition) initSpeech();
             if (!isRecognizing) recognition.start();
         }
 
@@ -218,11 +236,9 @@
 
         function addLog(speaker, text) {
             const log = document.getElementById('transcriptLog');
-            // Remove placeholder if exists
-            if (log.innerHTML.includes('開始ボタンを押して')) {
+            if (log.innerHTML.includes('音声を開始するとここに表示されます')) {
                 log.innerHTML = '';
             }
-
             const div = document.createElement('div');
             div.className = 'transcript-item';
             const time = new Date().toLocaleTimeString();
@@ -241,15 +257,19 @@
                         speaker: 'Presenter'
                     })
                 });
-                if (!res.ok) console.error("送信失敗");
+                if (!res.ok) console.error("送信に失敗しました");
             } catch (e) {
-                console.error("ネットワークエラー", e);
+                console.error("送信エラー", e);
             }
         }
 
-        // Init speech object lightly
-        init();
-
+        async function sendManualNote() {
+            const text = document.getElementById('quickNote').value.trim();
+            if (!text) return;
+            await sendTranscript(text);
+            addLog("Note", text);
+            document.getElementById('quickNote').value = '';
+        }
     </script>
 </body>
 

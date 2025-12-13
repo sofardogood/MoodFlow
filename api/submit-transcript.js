@@ -15,7 +15,7 @@ module.exports = async (req, res) => {
     }
 
     try {
-        const { sessionId, text, speaker } = req.body;
+        const { sessionId, text, speaker, tag, language } = req.body;
 
         // Validation
         if (!sessionId || !text) {
@@ -29,7 +29,9 @@ module.exports = async (req, res) => {
         const result = await createTranscript({
             sessionId,
             text,
-            speaker: speaker || 'Presenter'
+            speaker: speaker || 'Presenter',
+            tag,
+            language
         });
 
         return res.status(200).json({

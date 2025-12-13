@@ -19,7 +19,7 @@ module.exports = async (req, res) => {
         if (!sessionId) {
             return res.status(400).json({
                 success: false,
-                error: 'セッションIDが必要です'
+                error: 'Session ID is required'
             });
         }
 
@@ -31,7 +31,7 @@ module.exports = async (req, res) => {
         console.error('Get visual data error:', error);
         return res.status(500).json({
             success: false,
-            error: error.message || 'データ取得エラー'
+            error: error.message || 'データ取得に失敗しました'
         });
     }
 };
