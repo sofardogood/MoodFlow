@@ -3,7 +3,8 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>MoodFlow</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
   <style>
@@ -301,9 +302,12 @@
         </div>
 
         <div class="glass-card">
+          <h2>セッションに参加</h2>
+          <p style="margin-bottom:20px; color:#666;">セッション名とニックネームを入力してください</p>
+
           <div class="input-group">
-            <label>セッションID</label>
-            <input type="text" id="sessionInput" placeholder="meeting-001">
+            <label>セッション名</label>
+            <input type="text" id="sessionInput" placeholder="例: meeting-01">
           </div>
           <div class="input-group">
             <label>ニックネーム</label>
@@ -367,27 +371,14 @@
       </div>
 
       <div class="glass-card" style="margin-top: 10px;">
-        <h3 style="margin-bottom: 8px;">📝 発言メモ・議事メモ</h3>
-        <textarea id="noteInput" rows="3" placeholder="重要な発言や決定事項をメモ (全員匿名で保存)"></textarea>
-        <button class="btn btn-secondary" style="margin-top: 10px;" onclick="submitNote()">メモを送信</button>
-      </div>
-
-      <div class="glass-card" style="margin-top: 10px;">
         <h3 style="margin-bottom: 8px;">❓ 質問キュー（匿名）</h3>
         <textarea id="questionInput" rows="2" placeholder="聞きたいことやリクエストを送信"></textarea>
         <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">
           <button class="btn btn-secondary" style="flex:1" onclick="submitQuestion()">質問を送信</button>
           <button class="btn btn-secondary" style="flex:1" onclick="refreshQuestions()">最新の質問を表示</button>
         </div>
-        <ul id="questionList" style="margin-top:10px; padding-left:18px; line-height:1.5; max-height:160px; overflow-y:auto;"></ul>
-      </div>
-
-      <div class="glass-card" style="margin-top: 10px;">
-        <h3 style="margin-bottom: 8px;">🙋‍♀️ 会議後アンケート (1分)</h3>
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <button class="btn btn-secondary" style="flex:1" onclick="openSurveyModal()">開く</button>
-          <button class="btn btn-secondary" style="flex:1" onclick="openQRModal()">QRで共有</button>
-        </div>
+        <ul id="questionList"
+          style="margin-top:10px; padding-left:18px; line-height:1.5; max-height:160px; overflow-y:auto;"></ul>
       </div>
     </div>
   </div>
@@ -417,37 +408,7 @@
     </div>
   </div>
 
-  <!-- SURVEY MODAL -->
-  <div id="surveyModal" class="modal">
-    <div class="glass-card" style="width: 100%; max-width: 480px;">
-      <h3 style="margin-bottom: 10px;">会議後アンケート</h3>
-      <div class="input-group">
-        <label>満足度 (1-5)</label>
-        <input type="range" id="surveySatisfaction" min="1" max="5" value="4" oninput="document.getElementById('satValue').innerText=this.value;">
-        <div id="satValue" style="text-align:right;">4</div>
-      </div>
-      <div class="input-group">
-        <label>役割</label>
-        <select id="surveyRole">
-          <option value="participant">参加者</option>
-          <option value="facilitator">ファシリ</option>
-          <option value="executive">経営層</option>
-        </select>
-      </div>
-      <div class="input-group">
-        <label>良かった点</label>
-        <textarea id="surveyPositive" rows="2"></textarea>
-      </div>
-      <div class="input-group">
-        <label>改善点</label>
-        <textarea id="surveyImprovement" rows="2"></textarea>
-      </div>
-      <div style="display:flex; gap:10px;">
-        <button class="btn btn-secondary" onclick="closeSurveyModal()">閉じる</button>
-        <button class="btn btn-primary" onclick="submitSurvey()">送信</button>
-      </div>
-    </div>
-  </div>
+  <!-- SURVEY MODAL REMOVED -->
 
   <script>
     let sessionId = null;
@@ -481,15 +442,50 @@
         document.getElementById('displayNickname').textContent = nickname;
         switchScreen('mainScreen');
         refreshQuestions();
+        setupTopicBanner(sessionId); // Add banner
       }
     };
+
+    // New: Topic Banner Logic
+    function setupTopicBanner(sid) {
+      if (!sid) return;
+      const sessionDisplay = document.createElement('div');
+      sessionDisplay.style.cssText = "text-align:center; padding:10px; background:#ebf8ff; color:#2c5282; font-weight:bold; font-size:0.9rem; border-bottom:1px solid #bee3f8;";
+      sessionDisplay.innerHTML = `参加中のセッション: <span style="font-family:monospace; background:white; padding:2px 6px; border-radius:4px;">${sid}</span>`;
+      document.body.prepend(sessionDisplay);
+
+      const topicBanner = document.createElement('div');
+      topicBanner.id = 'topicBanner';
+      topicBanner.style.cssText = "text-align:center; padding:8px; background:#f0fff4; color:#22543d; font-size:0.9rem; border-bottom:1px solid #c6f6d5; display:none;";
+      topicBanner.innerHTML = `<strong>現在の話題:</strong> <span id="currentTopicText">取得中...</span>`;
+      sessionDisplay.after(topicBanner);
+
+      fetchTopics();
+      setInterval(fetchTopics, 60000);
+    }
+
+    async function fetchTopics() {
+      if (!sessionId) return;
+      try {
+        const res = await fetch(`/api/get-summaries?sessionId=${sessionId}`);
+        const data = await res.json();
+        if (data.success && data.summaries.length > 0) {
+          const latest = data.summaries[data.summaries.length - 1];
+          const lines = latest.content.split('\\n').filter(l => l.trim().startsWith('・') || l.trim().startsWith('-'));
+          if (lines.length > 0) {
+            document.getElementById('currentTopicText').innerText = lines.join(' / ').replace(/・/g, '');
+            document.getElementById('topicBanner').style.display = 'block';
+          }
+        }
+      } catch (e) { }
+    }
 
     function switchScreen(id) {
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
       document.getElementById(id).classList.add('active');
     }
 
-    function joinSession() {
+    async function joinSession() {
       const sVal = document.getElementById('sessionInput').value.trim();
       const nVal = document.getElementById('nicknameInput').value.trim();
       language = document.getElementById('languageSelect').value;
@@ -501,6 +497,22 @@
         alert("セッションIDとニックネームを入力してください");
         return;
       }
+
+      // Check Session Status
+      try {
+        const res = await fetch(`/api/session?sessionId=${sVal}`);
+        const data = await res.json();
+        // If session doesn't exist or isn't active, block join
+        // (User Requirement: "管理者スタートしないと入れない")
+        if (!data.exists) {
+          alert("そのセッション名は存在しません。正しい名前を確認するか、管理者が開始するまでお待ちください。");
+          return;
+        }
+        if (!data.isActive) {
+          alert("このセッションは現在アクティブではありません（開始前または終了済み）。");
+          return;
+        }
+      } catch (e) { console.error(e); alert("通信エラー"); return; }
 
       sessionId = sVal;
       nickname = nVal;
@@ -514,6 +526,22 @@
       document.getElementById('displayNickname').textContent = nickname;
       switchScreen('mainScreen');
       refreshQuestions();
+      setupTopicBanner(sessionId); // Ensure this is called if defined later
+      monitorSessionStatus(); // Start monitoring
+    }
+
+    function monitorSessionStatus() {
+      setInterval(async () => {
+        if (!sessionId) return;
+        try {
+          const res = await fetch(`/api/session?sessionId=${sessionId}`);
+          const data = await res.json();
+          if (data.exists && !data.isActive) {
+            // Show modal instead of alert
+            showEndModal();
+          }
+        } catch (e) { }
+      }, 3000); // Check every 3 sec
     }
 
     function leaveSession() {
@@ -591,60 +619,7 @@
       }
     }
 
-    function openSurveyModal() {
-      if (!sessionId) {
-        alert('先にセッションへ参加してください');
-        return;
-      }
-      document.getElementById('surveyModal').classList.add('active');
-    }
-
-    function closeSurveyModal() {
-      document.getElementById('surveyModal').classList.remove('active');
-    }
-
-    async function submitSurvey() {
-      try {
-        const body = {
-          sessionId,
-          nickname,
-          role: document.getElementById('surveyRole').value,
-          satisfaction: Number(document.getElementById('surveySatisfaction').value),
-          positive: document.getElementById('surveyPositive').value,
-          improvement: document.getElementById('surveyImprovement').value
-        };
-        await fetch('/api/submit-survey', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        });
-        showToast('アンケートを送信しました');
-        closeSurveyModal();
-      } catch (e) {
-        console.error(e);
-        alert('送信に失敗しました');
-      }
-    }
-
-    async function submitNote() {
-      const text = document.getElementById('noteInput').value.trim();
-      if (!sessionId) {
-        alert('先にセッションへ参加してください');
-        return;
-      }
-      if (!text) return;
-      try {
-        await fetch('/api/submit-transcript', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId, text, speaker: nickname || 'Note' })
-        });
-        document.getElementById('noteInput').value = '';
-        showToast('メモを保存しました');
-      } catch (e) {
-        console.error('Note submit failed', e);
-      }
-    }
+    // Survey and Note functions removed
 
     async function sendMood(emoji, score, comment) {
       try {
@@ -711,7 +686,30 @@
       t.style.display = 'block';
       setTimeout(() => { t.style.display = 'none'; }, 2000);
     }
+
+    // ===== SESSION END MODAL =====
+    function showEndModal() {
+      document.getElementById('endModal').classList.add('active');
+    }
+
+    function goToSurvey() {
+      window.location.href = `survey.html?sessionId=${sessionId}`;
+    }
   </script>
+
+  <!-- SESSION END MODAL -->
+  <div id="endModal" class="modal">
+    <div class="glass-card" style="text-align:center; padding: 30px; max-width: 400px;">
+      <h2 style="color: #ffdd57; margin-bottom: 15px;">🏁 セッション終了</h2>
+      <p style="font-size: 1.1rem; margin-bottom: 25px;">
+        会議が終了しました。<br>
+        アンケートにご協力をお願いします。
+      </p>
+      <button class="btn btn-primary" onclick="goToSurvey()" style="font-size: 1.2rem; padding: 15px 30px;">
+        👉 アンケートへ進む
+      </button>
+    </div>
+  </div>
 </body>
 
 </html>

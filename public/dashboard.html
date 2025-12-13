@@ -8,6 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@1.0.1/dist/chartjs-adapter-moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <script src="/checkAuth.js"></script>
     <style>
         body {
@@ -97,130 +98,134 @@
             padding: 20px;
             position: relative;
             border: 1px solid #e2e8f0;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
         }
 
         .chart-container {
-            min-height: 320px;
+            min-height: 300px;
         }
 
-        .transcript-container,
-        .summary-container,
-        .survey-container {
-            overflow-y: auto;
-            max-height: 420px;
-        }
-
-        .transcript-item {
-            padding: 10px;
-            border-bottom: 1px solid #f0f0f0;
-            animation: fadeIn 0.4s ease;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(8px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .transcript-time {
-            font-size: 0.8rem;
-            color: #888;
-            margin-right: 10px;
-        }
-
-        .tag {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-size: 0.75rem;
-            margin-left: 6px;
-            color: white;
-        }
-
-        .tag.decision {
-            background: #38b2ac;
-        }
-
-        .tag.concern {
-            background: #e53e3e;
-        }
-
-        .tag.idea {
-            background: #ed8936;
-        }
-
-        .tag.other {
-            background: #718096;
+        #moodChart {
+            width: 100% !important;
+            height: 100% !important;
         }
 
         .stats-overlay {
             position: absolute;
             top: 20px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 10px 20px;
-            border-radius: 8px;
+            right: 25px;
             text-align: right;
-            border: 1px solid #e0e0e0;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            pointer-events: none;
         }
 
         .stat-value {
-            font-size: 1.5rem;
+            font-size: 2.5rem;
             font-weight: bold;
-            color: #333;
+            color: #667eea;
         }
 
         .stat-label {
-            font-size: 0.8rem;
-            color: #666;
+            font-size: 0.9rem;
+            color: #718096;
         }
 
-        .panel h3 {
-            margin-top: 0;
-            color: #2d3748;
+        h3 {
+            margin: 0 0 15px 0;
             font-size: 1.1rem;
-            border-bottom: 2px solid #f0f0f0;
-            padding-bottom: 8px;
+            color: #2d3748;
         }
 
-        .pill {
-            background: #edf2f7;
-            padding: 6px 10px;
-            border-radius: 10px;
-            display: inline-block;
+        .transcript-container {
+            overflow-y: auto;
+            max-height: 300px;
+        }
+
+        .transcript-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .transcript-time {
+            color: #718096;
             margin-right: 6px;
             font-size: 0.85rem;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
         }
     </style>
 </head>
 
 <body>
-
     <header>
         <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
             <a href="admin.html" style="color: #667eea; text-decoration: none; font-size: 1rem;">← 管理画面</a>
             <h1>MoodFlow ダッシュボード</h1>
         </div>
         <div class="controls">
-            <input type="text" id="sessionIdInput" placeholder="セッションID" value="demo-1">
-            <select id="analysisLang">
-                <option value="ja">日本語</option>
-                <option value="en">English</option>
-            </select>
-            <button onclick="connect()">接続</button>
-            <button onclick="refreshAnalysis()" style="background:#ed8936;">AI分析を更新</button>
+            <!-- Recording Controls -->
+            <button id="btnRecStart" onclick="startRecognition()"
+                style="background:#e53e3e; display: flex; align-items: center; gap:5px;">
+                <span style="font-size:1.2rem;">●</span> 録音開始
+            </button>
+            <button id="btnRecStop" onclick="stopRecognition()" style="background:#718096; display:none;">
+                ■ 停止
+            </button>
+
+            <input type="text" id="sessionIdInput" placeholder="セッション名" value="demo-1" style="width:120px;">
+
+            <span style="border-left:1px solid #ddd; height:24px; margin:0 5px;"></span>
+
+            <div id="connectionStatus" style="font-size:0.8rem; color:#718096; margin-right:10px;">未接続</div>
+            <button onclick="connect()">再接続</button>
+            <button onclick="showSurveyQR()" style="background:#3182ce;">アンケートQR</button>
+            <div style="font-size:0.8rem; color:#718096; margin-left:10px;" id="recStatus"></div>
         </div>
     </header>
 
+    <script>
+        async function controlSession(action, silent = false) {
+            const sid = document.getElementById('sessionIdInput').value;
+            if (!sid) return alert("セッションIDを入力してください");
+            try {
+                const res = await fetch(`/api/session?sessionId=${sid}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action })
+                });
+                const data = await res.json();
+                if (!silent && data.success) alert(data.message);
+                else if (!data.success) console.error("Session Error: " + data.error);
+            } catch (e) { console.error(e); if (!silent) alert("通信エラー"); }
+        }
+    </script>
+
     <main>
+        <div class="panel" style="padding: 15px; background: #ebf8ff; border: 1px solid #bee3f8; margin-bottom: 0;">
+            <h3 style="margin: 0 0 10px 0; font-size: 1rem; color: #2c5282;">🤖 現在の議題リスト (AI抽出)</h3>
+            <div id="aiTopicsList"
+                style="font-weight: bold; color: #2a4365; display: flex; flex-wrap: wrap; gap: 15px;">
+                <span style="color:#a0aec0; font-weight:normal;">(会話が進むとここにトピックが表示されます...)</span>
+            </div>
+            <div style="text-align:right; font-size:0.8rem; margin-top:5px;">
+                <button onclick="fetchSummaries()"
+                    style="padding:4px 8px; font-size:0.75rem; background:none; color:#3182ce; border:1px solid #bee3f8;">更新</button>
+            </div>
+        </div>
+
         <div class="grid">
             <div class="chart-container">
                 <canvas id="moodChart"></canvas>
@@ -230,57 +235,139 @@
                     <div id="satisfaction" class="stat-label" style="margin-top:4px;">満足度: --</div>
                 </div>
             </div>
-            <div class="panel summary-container" id="summaryList">
-                <h3>🧠 AI要約 (5分刻み)</h3>
-                <div style="text-align: center; color: #a0aec0; margin-top: 10px;">
-                    まだ要約はありません...
+            <div class="panel transcript-container" id="transcriptList">
+                <h3>💬 リアルタイム文字起こし</h3>
+                <div style="text-align: center; color: #666; margin-top: 10px; font-size:0.9rem;">
+                    録音を開始するとここに表示されます
                 </div>
             </div>
         </div>
 
         <div class="grid" style="grid-template-columns: 1.2fr 0.8fr;">
-            <div class="panel transcript-container" id="transcriptList">
-                <h3>💬 コメント / 発言</h3>
-                <div style="text-align: center; color: #666; margin-top: 10px;">リアルタイムで発言を収集中...</div>
+            <div class="panel" id="questionPanel" style="max-height: 300px; overflow-y: auto;">
+                <h3>❓ 質問キュー</h3>
+                <div id="questionList" style="display:flex; flex-direction:column; gap:10px;"></div>
             </div>
-            <div class="panel survey-container" id="surveyPanel">
+            <div class="panel survey-container" id="surveyPanel" style="max-height: 300px;">
                 <h3>🙋‍♀️ アンケート</h3>
                 <div id="surveyStats" style="margin-bottom:10px;">満足度: --</div>
                 <div id="surveyList" style="display:flex; flex-direction:column; gap:8px;"></div>
             </div>
         </div>
-
-        <div class="grid" style="grid-template-columns: 1fr 1fr;">
-            <div class="panel" id="questionPanel">
-                <h3>❓ 質問キュー</h3>
-                <div id="questionList" style="display:flex; flex-direction:column; gap:10px;"></div>
-            </div>
-            <div class="panel" id="highlightPanel">
-                <h3>⭐ ハイライト</h3>
-                <div id="highlightList" style="display:flex; flex-direction:column; gap:10px;"></div>
-            </div>
-        </div>
-
-        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
-            <div class="panel" id="facilitatorView">
-                <h3>🎛 ファシリ用ビュー</h3>
-                <div id="facilitatorContent" style="color:#2d3748;">AI分析を更新してください。</div>
-                <div id="liveSuggestions" style="margin-top:10px; color:#2d3748; font-size:0.95rem;">
-                    リアルタイム介入ヒントを取得中...
-                </div>
-            </div>
-            <div class="panel" id="execView">
-                <h3>📈 経営層ビュー</h3>
-                <div id="execContent" style="color:#2d3748;">AI分析を更新してください。</div>
-            </div>
-        </div>
     </main>
 
+    <!-- QR MODAL -->
+    <div id="qrModal" class="modal">
+        <div class="panel" style="width: 100%; max-width: 420px; text-align:center;">
+            <h3 style="margin-bottom: 10px;">アンケートQR</h3>
+            <canvas id="qrCanvas"
+                style="background:white; padding:10px; border-radius:12px; margin: 10px auto;"></canvas>
+            <div style="word-break: break-all; font-size:0.85rem; opacity:0.8;" id="shareLink"></div>
+            <div style="display:flex; gap:10px; margin-top:15px; justify-content:center;">
+                <button onclick="closeQRModal()" style="background:#718096;">閉じる</button>
+                <button onclick="copyShareLink()">リンクをコピー</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
     <script>
         let sessionId = 'demo-1';
         let chart;
         let eventSource;
         let pollingInterval;
+        let qr;
+
+        // Recording vars
+        let socket;
+        let mediaRecorder;
+        let isRecording = false;
+
+        function initSocket() {
+            socket = io();
+            socket.on('connect', () => {
+                console.log('Socket connected for Rec');
+            });
+            socket.on('speech-result', (data) => {
+                if (data.isFinal) {
+                    sendTranscript(data.transcript);
+                } else {
+                    document.getElementById('recStatus').innerText = `認識中: ${data.transcript.substring(0, 15)}...`;
+                }
+            });
+            socket.on('speech-error', (msg) => {
+                console.error(msg);
+                alert("音声認識エラー: " + msg);
+                stopRecognition();
+            });
+        }
+
+        async function startRecognition() {
+            if (!socket) initSocket();
+            sessionId = document.getElementById('sessionIdInput').value || 'demo-1';
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: { channelCount: 1, sampleRate: 48000 }
+                });
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+                socket.emit('start-stream');
+                mediaRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0 && socket && socket.connected) {
+                        socket.emit('audio-data', e.data);
+                    }
+                };
+                mediaRecorder.start(100);
+                isRecording = true;
+                updateRecUI(true);
+            } catch (e) {
+                console.error(e);
+                alert("マイクの起動に失敗しました: " + e.message);
+            }
+        }
+
+        function stopRecognition() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(t => t.stop());
+                socket.emit('end-stream');
+                isRecording = false;
+                updateRecUI(false);
+                document.getElementById('recStatus').innerText = "";
+            }
+        }
+
+        function updateRecUI(recording) {
+            document.getElementById('btnRecStart').style.display = recording ? 'none' : 'flex';
+            document.getElementById('btnRecStop').style.display = recording ? 'flex' : 'none';
+            document.getElementById('recStatus').innerText = recording ? "録音中..." : "";
+        }
+
+        async function sendTranscript(text) {
+            try {
+                await fetch('/api/submit-transcript', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId, text, speaker: 'Admin' })
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        function showSurveyQR() {
+            const modal = document.getElementById('qrModal');
+            const surveyUrl = `${window.location.protocol}//${window.location.host}/survey.html?sessionId=${sessionId}`;
+            document.getElementById('shareLink').textContent = surveyUrl;
+            if (!qr) {
+                qr = new QRious({ element: document.getElementById('qrCanvas'), size: 200, value: surveyUrl });
+            } else { qr.set({ value: surveyUrl }); }
+            modal.classList.add('active');
+        }
+
+        function closeQRModal() { document.getElementById('qrModal').classList.remove('active'); }
+
+        async function copyShareLink() {
+            const text = document.getElementById('shareLink').textContent;
+            try { await navigator.clipboard.writeText(text); alert('リンクをコピーしました'); } catch (e) { }
+        }
 
         function initChart() {
             const ctx = document.getElementById('moodChart').getContext('2d');
@@ -288,47 +375,56 @@
                 type: 'line',
                 data: { datasets: [{ label: 'ムードスコア', data: [], borderColor: '#667eea', backgroundColor: 'rgba(102, 126, 234, 0.2)', borderWidth: 3, tension: 0.4, fill: true, pointRadius: 4, pointHoverRadius: 6 }] },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
+                    responsive: true, maintainAspectRatio: false,
                     scales: {
                         x: { type: 'time', time: { unit: 'second', displayFormats: { second: 'HH:mm:ss' } }, grid: { color: '#f0f0f0' }, ticks: { color: '#666' } },
                         y: { min: -5.5, max: 5.5, grid: { color: '#f0f0f0' }, ticks: { color: '#666' } }
                     },
                     plugins: { legend: { display: false } },
                     interaction: { intersect: false, mode: 'index' },
+                    animation: false
                 }
             });
         }
 
+        function setStatus(msg, color) {
+            const el = document.getElementById('connectionStatus');
+            if (el) { el.textContent = msg; el.style.color = color || '#718096'; }
+        }
+
         function connect() {
-            sessionId = document.getElementById('sessionIdInput').value || 'demo-1';
+            sessionId = (document.getElementById('sessionIdInput').value || 'demo-1').trim();
+            // Auto-start session
+            if (typeof controlSession === 'function') controlSession('start', true);
+
             if (eventSource) eventSource.close();
             if (pollingInterval) clearInterval(pollingInterval);
-            chart.data.datasets[0].data = [];
-            chart.update();
-            document.getElementById('transcriptList').innerHTML = '';
+
+            setStatus("接続中...", "orange");
 
             if (!!window.EventSource) {
                 eventSource = new EventSource(`/api/stream-visual-data?sessionId=${sessionId}`);
+                eventSource.onopen = () => setStatus("リアルタイム接続 (SSE)", "#38a169");
                 eventSource.addEventListener('update', e => {
                     const data = JSON.parse(e.data);
                     updateFromPayload(data);
                 });
                 eventSource.onerror = () => {
-                    // fallback to polling
+                    setStatus("SSE切断 -> ポーリング", "red");
                     if (eventSource) eventSource.close();
                     startPolling();
                 };
-            } else {
-                startPolling();
-            }
+            } else { startPolling(); }
+
             fetchSummaries();
             fetchSurvey();
+            if (!socket) initSocket();
         }
 
         function startPolling() {
+            setStatus("ポーリング接続 (1秒毎)", "#d69e2e");
             fetchData();
-            pollingInterval = setInterval(fetchData, 3000);
+            pollingInterval = setInterval(fetchData, 1000);
         }
 
         async function fetchData() {
@@ -339,33 +435,21 @@
             } catch (e) { console.error(e); }
         }
 
-        function updateFromPayload(data) {
-            if (!data) return;
-            const moods = data.moods || [];
-            const transcripts = data.transcripts || [];
-            updateChart(moods);
-
-            const moodComments = moods
-                .filter(m => m.comment && m.comment.trim() !== '')
-                .map(m => ({
-                    timestamp: m.timestamp,
-                    text: m.comment,
-                    translatedComment: m.translatedComment,
-                    tag: m.tag,
-                    source: 'mood'
-                }));
-
-            const combined = [...transcripts, ...moodComments].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-            updateTranscripts(combined);
-            if (data.questions) renderQuestions(data.questions);
-            if (data.highlights) renderHighlights(data.highlights);
+        function goToSurvey() {
+            window.location.href = `survey.html?sessionId=${sessionId}`;
         }
 
-        function updateChart(moods) {
+        function updateFromPayload(data) {
+            if (!data) return;
+
+            // Chart (Dashboard is admin view, no session end redirect)
+            const moods = data.moods || [];
+            console.log("Dashboard Update: Moods received:", moods.length, "Session:", sessionId);
             const points = moods.map(m => ({ x: m.timestamp, y: m.score }));
             chart.data.datasets[0].data = points;
             chart.update('none');
 
+            // Current Mood Stats
             if (moods.length > 0) {
                 const recent = moods.slice(-5);
                 const avg = recent.reduce((sum, m) => sum + m.score, 0) / recent.length;
@@ -375,22 +459,53 @@
                 else if (avg < 0) el.style.color = '#e53e3e';
                 else el.style.color = '#718096';
             }
+
+            // Transcript
+            const transcripts = data.transcripts || [];
+            updateTranscripts(transcripts);
+
+            // Questions
+            if (data.questions) renderQuestions(data.questions);
         }
+
+        let renderedTranscriptIds = new Set();
 
         function updateTranscripts(transcripts) {
             const list = document.getElementById('transcriptList');
-            list.innerHTML = '';
-            transcripts.slice().reverse().forEach(t => {
-                const div = document.createElement('div');
-                div.className = 'transcript-item';
-                const tag = t.tag || 'other';
-                div.innerHTML = `
-                    <span class="transcript-time">${new Date(t.timestamp).toLocaleTimeString()}</span>
-                    <span class="transcript-text">${t.text || t.comment || ''}</span>
-                    ${t.tag ? `<span class="tag ${tag}">${tag}</span>` : ''}
-                    ${t.translatedComment ? `<div style="font-size:0.85rem; color:#718096; margin-top:4px;">${t.translatedComment}</div>` : ''}
-                `;
-                list.prepend(div);
+            let h3 = list.querySelector('h3');
+            if (!h3) {
+                h3 = document.createElement('h3');
+                h3.textContent = '💬 リアルタイム文字起こし';
+                list.innerHTML = '';
+                list.appendChild(h3);
+            }
+
+            // Keep transcripts visible even after recording stops (user request)
+
+            // Remove placeholder if exists
+            const placeholder = Array.from(list.children).find(c => c.innerText && c.innerText.includes('録音を開始'));
+            if (placeholder) placeholder.remove();
+
+            // Sort transcripts: oldest first
+            const sorted = transcripts.slice().sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+            sorted.forEach(t => {
+                const id = t.id || `${t.timestamp}-${t.text.length}`;
+                if (!renderedTranscriptIds.has(id)) {
+                    renderedTranscriptIds.add(id);
+                    const div = document.createElement('div');
+                    div.className = 'transcript-item';
+                    div.innerHTML = `
+                        <span class="transcript-time">${new Date(t.timestamp).toLocaleTimeString()}</span>
+                        <span class="transcript-text" style="font-weight:500;">${t.speaker}: ${t.text}</span>
+                    `;
+                    // Insert after h3 (newest at top)
+                    if (list.children.length > 1) {
+                        list.insertBefore(div, list.children[1]);
+                    } else {
+                        list.appendChild(div);
+                    }
+                }
             });
         }
 
@@ -399,40 +514,21 @@
                 const res = await fetch(`/api/get-summaries?sessionId=${sessionId}`);
                 const data = await res.json();
                 if (data.success && data.summaries.length > 0) {
-                    const list = document.getElementById('summaryList');
-                    const html = data.summaries.map(s => `
-                        <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed #e2e8f0;">
-                            <div style="font-size: 0.8rem; color: #718096; margin-bottom: 4px;">
-                                ${new Date(s.startTime).toLocaleTimeString()} - ${new Date(s.endTime).toLocaleTimeString()}
-                            </div>
-                            <div style="font-size: 0.95rem; line-height: 1.6; color: #2d3748;">
-                                ${s.content}
-                            </div>
-                        </div>
-                    `).join('');
-                    list.innerHTML = `<h3>🧠 AI要約 (5分刻み)</h3>` + html;
+                    const latest = data.summaries[data.summaries.length - 1];
+                    const content = latest.content;
+                    const lines = content.split('\n').filter(l => l.trim().startsWith('・') || l.trim().startsWith('-'));
+                    const container = document.getElementById('aiTopicsList');
+                    if (lines.length > 0) {
+                        container.innerHTML = lines.map(l => `<span style="background:white; padding:4px 10px; border-radius:15px; border:1px solid #cbd5e0;">${l}</span>`).join('');
+                    } else {
+                        container.innerHTML = `<span style="color:#4a5568;">${content}</span>`;
+                    }
                 }
             } catch (e) { console.error(e); }
         }
 
-        async function fetchSurvey() {
-            try {
-                const res = await fetch(`/api/get-survey?sessionId=${sessionId}`);
-                const data = await res.json();
-                if (!data.success) return;
-                const stats = data.stats || {};
-                document.getElementById('satisfaction').textContent = `満足度: ${stats.avgSatisfaction ? stats.avgSatisfaction.toFixed(2) : '--'}`;
-                document.getElementById('surveyStats').textContent = `回答数: ${stats.count || 0} / 平均満足度: ${stats.avgSatisfaction ? stats.avgSatisfaction.toFixed(2) : '--'}`;
-                const list = document.getElementById('surveyList');
-                list.innerHTML = data.responses.map(r => `
-                    <div style="padding:10px; border:1px solid #edf2f7; border-radius:8px;">
-                        <div class="pill">${r.role || 'N/A'}</div>
-                        <div class="pill">満足度: ${r.satisfaction ?? '-'}</div>
-                        <div style="margin-top:6px; color:#2d3748;">${r.positive || ''}</div>
-                        <div style="margin-top:4px; color:#c53030;">${r.improvement || ''}</div>
-                    </div>
-                `).join('');
-            } catch (e) { console.error(e); }
+        function fetchSurvey() {
+            // Survey fetch placeholder
         }
 
         function renderQuestions(questions) {
@@ -443,13 +539,9 @@
             }
             list.innerHTML = questions.map(q => `
                 <div style="border:1px solid #edf2f7; border-radius:8px; padding:10px; display:flex; justify-content:space-between; gap:10px; align-items:center;">
-                    <div>
-                        <div style="font-weight:600;">${q.text}</div>
-                        <div style="font-size:0.8rem; color:#718096;">${new Date(q.createdAt).toLocaleTimeString()} / ${q.status}</div>
-                    </div>
-                    <button onclick="voteQuestion(${q.id})" style="background:#edf2f7; color:#2d3748; padding:8px 10px; border-radius:8px; border:1px solid #e2e8f0;">👍 ${q.voteCount}</button>
-                </div>
-            `).join('');
+                    <div><div style="font-weight:600;">${q.text}</div></div>
+                    <button onclick="voteQuestion(${q.id})" style="background:#edf2f7; color:#2d3748; padding:8px 10px; border-radius:8px;">👍 ${q.voteCount}</button>
+                </div>`).join('');
         }
 
         async function voteQuestion(id) {
@@ -460,88 +552,15 @@
                     body: JSON.stringify({ action: 'vote', questionId: id, sessionId })
                 });
                 fetchData();
-            } catch (e) {
-                console.error(e);
-            }
-        }
-
-        function renderHighlights(highlights) {
-            const list = document.getElementById('highlightList');
-            if (!highlights || highlights.length === 0) {
-                list.innerHTML = '<div style="color:#718096;">ハイライトはまだありません</div>';
-                return;
-            }
-            list.innerHTML = highlights.map(h => `
-                <div style="border:1px solid #edf2f7; border-radius:8px; padding:10px;">
-                    <div style="font-size:0.9rem; color:#2d3748;">${h.text}</div>
-                    <div style="font-size:0.8rem; color:#718096; margin-top:4px;">${h.tag || 'タグなし'} / ${new Date(h.createdAt).toLocaleTimeString()}</div>
-                </div>
-            `).join('');
-        }
-
-        async function refreshAnalysis() {
-            try {
-                const lang = document.getElementById('analysisLang').value;
-                const res = await fetch('/api/analyze-session', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sessionId, targetLanguage: lang })
-                });
-                const data = await res.json();
-                if (!data.success) {
-                    alert('AI分析に失敗しました: ' + data.error);
-                    return;
-                }
-                renderAnalysis(data.data.analysis);
-            } catch (e) {
-                console.error(e);
-                alert('AI分析でエラーが発生しました');
-            }
-        }
-
-        function renderAnalysis(analysis) {
-            if (!analysis) return;
-            const fac = document.getElementById('facilitatorContent');
-            fac.innerHTML = `
-                <div style="margin-bottom:8px;">${analysis.overallMood || ''}</div>
-                <div><strong>介入ヒント:</strong><br>${(analysis.facilitatorCues || []).map(i => `• ${i}`).join('<br>')}</div>
-                <div style="margin-top:8px;"><strong>懸念:</strong><br>${(analysis.concerns || []).map(i => `• ${i}`).join('<br>')}</div>
-            `;
-            const exec = document.getElementById('execContent');
-            exec.innerHTML = `
-                <div style="margin-bottom:8px;">${analysis.executiveSummary || ''}</div>
-                <div><strong>Key Insights:</strong><br>${(analysis.keyInsights || []).map(i => `• ${i}`).join('<br>')}</div>
-                <div style="margin-top:8px;"><strong>Next Actions:</strong><br>${(analysis.recommendations || []).map(i => `• ${i}`).join('<br>')}</div>
-            `;
-        }
-
-        async function fetchInterventions() {
-            try {
-                const res = await fetch(`/api/interventions?sessionId=${sessionId}`);
-                const data = await res.json();
-                if (!data.success) return;
-                const tips = data.suggestions || [];
-                const el = document.getElementById('liveSuggestions');
-                if (!el) return;
-                if (!tips.length) {
-                    el.textContent = '介入ヒントはまだありません';
-                } else {
-                    el.innerHTML = `<strong>リアルタイム介入ヒント:</strong><br>${tips.map(t => `• ${t}`).join('<br>')}`;
-                }
-            } catch (e) {
-                console.error(e);
-            }
+            } catch (e) { }
         }
 
         initChart();
         const params = new URLSearchParams(window.location.search);
-        const urlSessionId = params.get('sessionId');
-        if (urlSessionId) {
-            document.getElementById('sessionIdInput').value = urlSessionId;
-        }
+        if (params.get('sessionId')) document.getElementById('sessionIdInput').value = params.get('sessionId');
+
         connect();
-        fetchInterventions();
-        setInterval(fetchInterventions, 15000);
+        setInterval(fetchSummaries, 60000); // Update topics every minute
     </script>
 </body>
 

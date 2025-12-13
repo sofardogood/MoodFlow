@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoodFlow - アンケート</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            background: #667eea;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card" id="formCard">
+        <h1>会議後アンケート</h1>
+        <div class="input-group">
+            <label>セッションID</label>
+            <input type="text" id="sessionId" readonly style="background:#eee;">
+        </div>
+        <div class="input-group">
+            <label>役割</label>
+            <select id="role">
+                <option value="participant">参加者</option>
+                <option value="facilitator">ファシリテーター</option>
+                <option value="executive">経営層</option>
+            </select>
+        </div>
+        <div class="input-group">
+            <label>満足度 (1-5)</label>
+            <input type="range" id="satisfaction" min="1" max="5" value="4"
+                oninput="document.getElementById('satVal').innerText = this.value">
+            <div style="text-align: right;" id="satVal">4</div>
+        </div>
+        <div class="input-group">
+            <label>良かった点</label>
+            <textarea id="positive" rows="3"></textarea>
+        </div>
+        <div class="input-group">
+            <label>改善点</label>
+            <textarea id="improvement" rows="3"></textarea>
+        </div>
+        <button onclick="submitSurvey()">送信する</button>
+    </div>
+    <div class="card" id="successCard" style="display:none; text-align:center;">
+        <h2 style="color:#4CAF50;">送信しました！</h2>
+        <p>ご協力ありがとうございました。</p>
+    </div>
+
+    <script>
+        window.onload = () => {
+            const params = new URLSearchParams(window.location.search);
+            document.getElementById('sessionId').value = params.get('sessionId') || 'demo-1';
+        };
+
+        async function submitSurvey() {
+            const body = {
+                sessionId: document.getElementById('sessionId').value,
+                role: document.getElementById('role').value,
+                satisfaction: Number(document.getElementById('satisfaction').value),
+                positive: document.getElementById('positive').value,
+                improvement: document.getElementById('improvement').value
+            };
+            try {
+                const res = await fetch('/api/submit-survey', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                if (res.ok) {
+                    document.getElementById('formCard').style.display = 'none';
+                    document.getElementById('successCard').style.display = 'block';
+                } else {
+                    alert('送信エラー');
+                }
+            } catch (e) {
+                console.error(e);
+                alert('送信エラー');
+            }
+        }
+    </script>
+</body>
+
+</html>

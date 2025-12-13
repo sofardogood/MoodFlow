@@ -15,16 +15,23 @@ module.exports = async (req, res) => {
 
   let closed = false;
   const sendEvent = (event, data) => {
-    res.write(`event: ${event}\n`);
-    res.write(`data: ${JSON.stringify(data)}\n\n`);
+    if (closed) return;
+    try {
+      res.write(`event: ${event}\n`);
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    } catch (e) { closed = true; }
   };
 
   async function pushData() {
     if (closed) return;
     try {
       const data = await getVisualData(sessionId);
+      if (data && data.moods) {
+        console.log(`[SSE] Push to ${sessionId}: ${data.moods.length} moods`);
+      }
       sendEvent('update', data);
     } catch (error) {
+      console.error(error);
       sendEvent('error', { message: error.message || 'failed to fetch data' });
     }
   }
@@ -32,7 +39,7 @@ module.exports = async (req, res) => {
   // Initial payload
   await pushData();
 
-  const interval = setInterval(pushData, parseInt(process.env.SSE_POLL_INTERVAL_MS || '3000', 10));
+  const interval = setInterval(pushData, parseInt(process.env.SSE_POLL_INTERVAL_MS || '1000', 10));
 
   req.on('close', () => {
     closed = true;

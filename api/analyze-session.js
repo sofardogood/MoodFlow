@@ -22,8 +22,18 @@ module.exports = async (req, res) => {
             orderBy: { startTime: 'asc' }
         });
 
-        if (moodsRaw.length === 0 && summaries.length === 0) {
-            return res.status(400).json({ success: false, error: '分析するデータがありません' });
+        // ★ 文字起こしデータも取得
+        const transcriptsRaw = await prisma.transcript.findMany({
+            where: { sessionId },
+            orderBy: { createdAt: 'asc' }
+        });
+
+        const surveyResponses = await getSurveyResponses(sessionId);
+
+        console.log(`[Analyze] Session: ${sessionId}, Moods: ${moodsRaw.length}, Summaries: ${summaries.length}, Transcripts: ${transcriptsRaw.length}, Surveys: ${surveyResponses.length}`);
+
+        if (moodsRaw.length === 0 && summaries.length === 0 && transcriptsRaw.length === 0 && surveyResponses.length === 0) {
+            return res.status(400).json({ success: false, error: `分析するデータがありません（セッション: ${sessionId}）` });
         }
 
         const moodData = moodsRaw.map(m => ({
@@ -32,9 +42,15 @@ module.exports = async (req, res) => {
             timestamp: m.createdAt
         }));
 
-        const surveyResponses = await getSurveyResponses(sessionId);
+        // Normalize transcripts to have timestamp field for the service
+        const transcripts = transcriptsRaw.map(t => ({
+            ...t,
+            timestamp: t.createdAt
+        }));
 
-        const result = await analyzeMeetingData(moodData, summaries, { targetLanguage });
+
+        // ★ transcripts と surveyResponses も渡す
+        const result = await analyzeMeetingData(moodData, summaries, transcripts, surveyResponses, { targetLanguage });
 
         res.json({
             success: true,

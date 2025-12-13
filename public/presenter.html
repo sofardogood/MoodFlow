@@ -152,10 +152,12 @@
         </div>
     </div>
 
+    <script src="/socket.io/socket.io.js"></script>
     <script>
-        let recognition;
-        let isRecognizing = false;
+        let socket;
+        let mediaRecorder;
         let sessionId = 'demo-1';
+        let isRecording = false;
 
         window.onload = function () {
             const params = new URLSearchParams(window.location.search);
@@ -164,7 +166,8 @@
                 document.getElementById('sessionId').value = urlSessionId;
                 sessionId = urlSessionId;
             }
-            initSpeech();
+            initSocket();
+
             document.getElementById('quickNote').addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
@@ -173,44 +176,70 @@
             });
         };
 
-        function initSpeech() {
-            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                alert("お使いのブラウザは音声認識に対応していません。Chromeでお試しください。");
-                return;
-            }
+        function initSocket() {
+            socket = io();
+            socket.on('connect', () => {
+                console.log('Socket connected');
+                setStatus("サーバー接続完了", "green");
+            });
 
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            recognition = new SpeechRecognition();
-            recognition.lang = 'ja-JP';
-            recognition.continuous = true;
-            recognition.interimResults = false;
-
-            recognition.onstart = function () {
-                isRecognizing = true;
-                setStatus("録音中...", "red");
-                toggleButtons(true);
-            };
-
-            recognition.onend = function () {
-                isRecognizing = false;
-                setStatus("停止", "#666");
-                toggleButtons(false);
-            };
-
-            recognition.onresult = async function (event) {
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        const text = event.results[i][0].transcript;
-                        addLog("Speaker", text);
-                        await sendTranscript(text);
-                    }
+            socket.on('speech-result', (data) => {
+                if (data.isFinal) {
+                    addLog("Speaker", data.transcript);
+                    sendTranscript(data.transcript);
+                } else {
+                    document.getElementById('status').innerText = `認識中: ${data.transcript}`;
                 }
-            };
+            });
 
-            recognition.onerror = function (event) {
-                console.error("Speech Error", event.error);
-                setStatus("エラー: " + event.error, "#e53e3e");
-            };
+            socket.on('speech-error', (msg) => {
+                console.error(msg);
+                setStatus("認識エラー: " + msg, "red");
+                stopRecognition();
+            });
+        }
+
+        async function startRecognition() {
+            sessionId = document.getElementById('sessionId').value || 'demo-1';
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        channelCount: 1,
+                        sampleRate: 48000
+                    }
+                });
+
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+
+                socket.emit('start-stream');
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0 && socket.connected) {
+                        socket.emit('audio-data', event.data);
+                    }
+                };
+
+                mediaRecorder.start(100); // 100ms chunks
+                isRecording = true;
+                setStatus("録音中 (Cloud Speech)...", "red");
+                toggleButtons(true);
+
+            } catch (e) {
+                console.error("Mic Error:", e);
+                setStatus("マイクエラー: " + e.message, "red");
+            }
+        }
+
+        function stopRecognition() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                socket.emit('end-stream');
+                isRecording = false;
+                setStatus("待機中", "#666");
+                toggleButtons(false);
+            }
         }
 
         function toggleButtons(recording) {
@@ -222,16 +251,6 @@
             const el = document.getElementById('status');
             el.innerText = text;
             el.style.color = color;
-        }
-
-        function startRecognition() {
-            sessionId = document.getElementById('sessionId').value || 'demo-1';
-            if (!recognition) initSpeech();
-            if (!isRecognizing) recognition.start();
-        }
-
-        function stopRecognition() {
-            if (recognition && isRecognizing) recognition.stop();
         }
 
         function addLog(speaker, text) {
@@ -270,7 +289,42 @@
             addLog("Note", text);
             document.getElementById('quickNote').value = '';
         }
+
+        // Session Monitor
+        setInterval(checkSessionStatus, 3000); // Poll every 3 seconds
+
+        async function checkSessionStatus() {
+            if (!sessionId) return;
+            try {
+                const res = await fetch(`/api/session?sessionId=${sessionId}`);
+                const data = await res.json();
+                if (data.success && data.isActive === false) {
+                    const modal = document.getElementById('endModal');
+                    modal.style.display = 'flex';
+                }
+            } catch (e) { console.error("Session check error", e); }
+        }
+
+        function goToSurvey() {
+            window.location.href = `survey.html?sessionId=${sessionId}`;
+        }
     </script>
+
+    <!-- SESSION END MODAL -->
+    <div id="endModal"
+        style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); z-index:100; justify-content:center; align-items:center; padding:20px;">
+        <div style="background:white; border-radius:12px; padding:30px; text-align:center; max-width:450px;">
+            <h2 style="color: #e53e3e; margin-bottom: 15px; margin-top:0;">🏁 セッション終了</h2>
+            <p style="font-size: 1.1rem; color: #4a5568; margin-bottom: 25px;">
+                会議が終了しました。<br>
+                アンケートにご協力をお願いします。
+            </p>
+            <button onclick="goToSurvey()"
+                style="background: #38a169; color:white; font-size: 1.2rem; padding: 12px 30px; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
+                👉 アンケートへ進む
+            </button>
+        </div>
+    </div>
 </body>
 
 </html>

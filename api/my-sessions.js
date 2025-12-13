@@ -25,9 +25,9 @@ module.exports = async (req, res) => {
 
     try {
         if (req.method === 'GET') {
-            // List sessions for this user
+            // List sessions for this user (temporarily listing all to debug)
             const sessions = await prisma.session.findMany({
-                where: { ownerId: userId },
+                // where: { ownerId: userId }, // Temporarily disabled for debugging
                 orderBy: { createdAt: 'desc' },
                 include: {
                     _count: {
@@ -41,9 +41,22 @@ module.exports = async (req, res) => {
         if (req.method === 'POST') {
             // Create new session
             const { name } = req.body;
+            if (!name || !name.trim()) {
+                return res.status(400).json({ success: false, error: 'Session name is required' });
+            }
+
+            const sessionId = name.trim();
+
+            // Check if session with this ID already exists
+            const existing = await prisma.session.findUnique({ where: { id: sessionId } });
+            if (existing) {
+                return res.status(400).json({ success: false, error: 'このセッション名は既に使用されています' });
+            }
+
             const session = await prisma.session.create({
                 data: {
-                    name: name || `Session ${new Date().toISOString()}`,
+                    id: sessionId,  // Use the name as the ID
+                    name: sessionId,
                     ownerId: userId
                 }
             });

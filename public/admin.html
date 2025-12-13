@@ -173,19 +173,36 @@
 
         const list = document.getElementById('sessionList');
         if (data.success && data.sessions.length > 0) {
-          list.innerHTML = data.sessions.map(s => `
+          list.innerHTML = data.sessions.map(s => {
+            const isEnded = s.isActive === false;
+            let actionArea = '';
+            if (!isEnded) {
+              // Active: Show End button
+              actionArea = `<button onclick="endSession('${s.id}')" class="btn btn-primary" style="background:#e53e3e; font-size:0.9rem;">📋 終了してアンケート分析</button>`;
+            } else {
+              // Ended: Show Analyze button + Survey count
+              const surveyCount = s._count ? s._count.surveyResponses : 0;
+              actionArea = `
+                    <div style="display:flex; flex-direction:column; align-items:end; gap:5px;">
+                        <span style="font-size:0.85rem; color:#4a5568;">アンケート回答: <strong>${surveyCount}</strong>件</span>
+                        <button onclick="analyzeSession('${s.id}')" class="btn btn-outline" style="border-color: #ed8936; color: #ed8936; font-size:0.9rem;">📝 分析を実行</button>
+                    </div>
+                `;
+            }
+
+            return `
           <div class="session-item">
             <div class="session-info">
               <h3>${escapeHtml(s.name)}</h3>
               <div class="session-meta">Created: ${new Date(s.createdAt).toLocaleString()} | ID: ${s.id}</div>
             </div>
-            <div class="actions">
+            <div class="actions" style="align-items:center;">
               <a href="presenter.html?sessionId=${s.id}" class="btn btn-primary" target="_blank">🎤 プレゼンター</a>
               <a href="dashboard.html?sessionId=${s.id}" class="btn btn-outline" target="_blank">📊 ダッシュボード</a>
-              <button onclick="analyzeSession('${s.id}')" class="btn btn-outline" style="border-color: #ed8936; color: #ed8936;">📝 終了して分析</button>
+              ${actionArea}
             </div>
           </div>
-        `).join('');
+        `}).join('');
         } else {
           list.innerHTML = '<p style="text-align: center; color: #a0aec0;">まだセッションがありません</p>';
         }
@@ -193,6 +210,18 @@
         console.error(e);
         document.getElementById('sessionList').innerHTML = '<p style="color: red;">読み込みエラーが発生しました</p>';
       }
+    }
+
+    async function endSession(sessionId) {
+      if (!confirm('セッションを終了しますか？\n参加者はアンケート画面へ移動します。')) return;
+      try {
+        await fetch(`/api/session?sessionId=${sessionId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'end' })
+        });
+        loadSessions(); // Reload to update UI
+      } catch (e) { alert("エラーが発生しました"); }
     }
 
     async function createSession() {
@@ -262,6 +291,7 @@
       content.innerHTML = '<p style="text-align:center; color:#666;">AIが会議データを分析しています...<br>しばらくお待ちください。</p>';
 
       try {
+        // Just analyze (no end session here)
         const res = await fetch('/api/analyze-session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
