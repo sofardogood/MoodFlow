@@ -1,150 +1,229 @@
-# MoodFlow - 会議中の心の変化分析システム
+# 補佐やねん (MoodFlow) - プロジェクト構造・データベース設計
 
 ## プロジェクト概要
-リアルタイムで参加者の心の変化を数値化・可視化する会議分析システム
+リアルタイムで会議参加者の感情・質問・音声文字起こしを収集・可視化し、A2A（Agent-to-Agent）によるユーモア介入と事後アンケート連携の時系列AI統合分析を行う会議支援システムです。
 
 ## 技術スタック
-- **フロントエンド**: HTML5, CSS3, JavaScript (Vanilla)
-- **バックエンド**: Google Apps Script (GAS)
-- **データベース**: Google Spreadsheet
-- **AI分析**: Google Gemini API
-- **グラフ生成**: Google Charts API
+- **フロントエンド**: HTML5, CSS3, JavaScript (Vanilla), Chart.js, Socket.IO Client
+- **バックエンド**: Node.js, Express.js (`local-server.js`), Socket.IO, Vercel Serverless Functions互換 (`api/*.js`)
+- **データベース**: PostgreSQL (Supabase) + Prisma ORM (`prisma/schema.prisma`) / Google Spreadsheet（フォールバック互換）
+- **AI・音声・検索**: Google Gemini API (`@google/generative-ai`), Google Cloud Speech-to-Text (`@google-cloud/speech`), Google Custom Search API
+- **外部連携**: Google Slides / Drive API, Slack / Microsoft Teams Webhook, Model Context Protocol (`mcp-server.js`)
 
-## システム構成
+---
 
-```
+## ディレクトリ構成
+
+```text
 MoodFlow/
-├── gas/                          # Google Apps Scriptファイル
-│   ├── Code.gs                   # メインエントリーポイント
-│   ├── SessionManager.gs         # セッション管理
-│   ├── DataService.gs            # データ操作サービス
-│   ├── AnalysisService.gs        # 分析エンジン
-│   ├── GeminiAPI.gs              # Gemini AI連携
-│   ├── ChartGenerator.gs         # グラフ生成
-│   └── ReportGenerator.gs        # レポート生成
+├── public/                        # フロントエンド画面・静的アセット
+│   ├── index.html                 # 参加者用リアクション・質問入力画面
+│   ├── presenter.html             # プレゼンター用音声ストリーミング・A2A介入アラート画面
+│   ├── dashboard.html             # リアルタイム分析ダッシュボード
+│   ├── admin.html                 # セッション管理・QR生成・スライド出力画面
+│   ├── survey.html                # セッション後アンケート画面
+│   ├── login.html                 # 管理者ログイン画面 (Supabase Auth)
+│   ├── checkAuth.js               # 認証状態チェック用スクリプト
+│   └── logo.png                   # サービスロゴ
 │
-├── ui/                           # UIファイル
-│   ├── ParticipantApp.html       # 参加者用アプリ
-│   ├── AdminDashboard.html       # 管理者ダッシュボード
-│   ├── styles.css                # 共通スタイル
-│   └── app.js                    # クライアントサイドJS
+├── api/                           # REST / SSE API ハンドラ群
+│   ├── submit-mood.js             # 感情スコア・絵文字・コメント送信
+│   ├── submit-transcript.js       # 文字起こしデータ登録
+│   ├── get-visual-data.js         # ダッシュボード表示用データ一括取得
+│   ├── stream-visual-data.js      # SSE によるリアルタイムデータストリーム配信
+│   ├── humor-intervention.js      # A2A ユーモア介入提案の生成・ログ保存
+│   ├── rate-intervention.js       # 介入提案の効果評価 (1〜5) 更新
+│   ├── analyze-session.js         # ムード×文字起こし×要約×アンケートのAI統合分析
+│   ├── get-summaries.js           # 5分ごとのAI要約一覧取得
+│   ├── questions.js               # 匿名質問の投稿・一覧・投票・ステータス変更
+│   ├── highlights.js              # 会議ハイライトの追加・取得
+│   ├── tag-override.js            # 自動分類タグの手動変更
+│   ├── submit-survey.js           # 事後アンケート送信
+│   ├── get-survey.js              # 事後アンケート集計・回答取得
+│   ├── cohort-stats.js            # 役職・部署・テーマ別のコホート統計
+│   ├── compare-sessions.js        # 複数セッションの比較統計
+│   ├── interventions.js           # ルールベースのファシリテーション提案取得
+│   ├── export.js                  # CSV / JSON データエクスポート
+│   ├── session.js                 # セッションの作成・開始・終了・状態取得
+│   ├── my-sessions.js             # ログインユーザーのセッション一覧・管理
+│   ├── generate-slides.js         # Googleスライドレポート自動生成
+│   ├── cron-generate-reports.js   # 定期レポート生成用バッチAPI
+│   ├── auth.js / auth-config.js   # Supabase Auth 認証補助
+│   └── admin-login.js / get-session-data.js
 │
-├── config/                       # 設定ファイル
-│   └── appsscript.json          # GAS設定
+├── lib/                           # サービス・インフラ層モジュール
+│   ├── humor-agents.js            # A2A マルチエージェント (Host / 関西 / 関東) & RAG学習
+│   ├── openai-service.js          # Gemini 統合分析・時系列照合・翻訳・タグ分類
+│   ├── ai-service.js              # 5分要約・質問抽出ロジック
+│   ├── scheduler.js               # 5分ごとの自動要約＆生文字起こしクリーンアップ
+│   ├── search-service.js          # Google Custom Search API による話術検索
+│   ├── alerts.js                  # ネガティブ急増検知 & Slack/Teams/Webhook 通知
+│   ├── db.js                      # Prisma / Google Sheets データアクセス抽象化層
+│   ├── prisma.js                  # Prisma Client インスタンス管理
+│   ├── supabaseClient.js          # Supabase クライアント初期化
+│   ├── slides-generator.js        # Google Slides 自動生成サービス
+│   └── sheets.js                  # Google Sheets 読み書きサービス
 │
-└── docs/                         # ドキュメント
-    ├── SETUP.md                  # セットアップガイド
-    ├── API.md                    # API仕様
-    └── DEPLOYMENT.md             # デプロイ手順
+├── prisma/
+│   └── schema.prisma              # Prisma スキーマ定義 (PostgreSQL 全11モデル)
+│
+├── docs/                          # ドキュメント群
+│   ├── features.md                # 全機能一覧
+│   ├── humor-intervention.md      # A2A ユーモア介入システム仕様
+│   ├── API.md                     # API仕様書
+│   ├── DEPLOYMENT.md              # デプロイ＆アーキテクチャ解説
+│   ├── DEPLOYMENT_RENDER.md       # Render.com デプロイ手順
+│   ├── SETUP.md                   # セットアップ詳細
+│   └── presentation_plan.md       # プレゼンテーション構成
+│
+├── gas/                           # Google Apps Script スタンドアロン版
+├── local-server.js                # Express + Socket.IO メインサーバー
+├── mcp-server.js                  # Model Context Protocol (MCP) サーバー
+├── package.json
+└── README.md
 ```
 
-## データ構造
+---
 
-### 1. Sessions シート
-| 列名 | 型 | 説明 |
-|-----|-----|------|
-| sessionId | String | 会議セッションID (UUID) |
-| meetingTitle | String | 会議タイトル |
-| startTime | DateTime | 開始時刻 |
-| endTime | DateTime | 終了時刻 |
-| status | String | active/completed |
-| createdBy | String | 作成者 |
+## データベース設計（Prisma / PostgreSQL）
 
-### 2. Participants シート
-| 列名 | 型 | 説明 |
-|-----|-----|------|
-| participantId | String | 参加者ID (UUID) |
-| sessionId | String | セッションID |
-| nickname | String | ニックネーム |
-| joinTime | DateTime | 参加時刻 |
-| deviceInfo | String | デバイス情報 |
+### ER 図（Entity-Relationship Diagram）
 
-### 3. MoodData シート
-| 列名 | 型 | 説明 |
-|-----|-----|------|
-| recordId | String | レコードID (UUID) |
-| sessionId | String | セッションID |
-| participantId | String | 参加者ID |
-| nickname | String | ニックネーム |
-| timestamp | DateTime | タイムスタンプ |
-| moodScore | Number | 感情スコア (-5〜+5) |
-| comment | String | 発言内容 |
-| emoticon | String | 絵文字 |
+```mermaid
+erDiagram
+    User ||--o{ Session : "owns"
+    Session ||--o{ Mood : "has"
+    Session ||--o{ Transcript : "has"
+    Session ||--o{ Summary : "has"
+    Session ||--o{ SurveyResponse : "has"
+    Session ||--o{ Question : "has"
+    Session ||--o{ Highlight : "has"
+    Question ||--o{ QuestionVote : "has"
 
-### 4. Analysis シート
-| 列名 | 型 | 説明 |
-|-----|-----|------|
-| analysisId | String | 分析ID |
-| sessionId | String | セッションID |
-| timestamp | DateTime | 分析時刻 |
-| analysisType | String | individual/group/timeline |
-| targetId | String | 対象ID（参加者IDなど） |
-| resultData | JSON | 分析結果 |
+    User {
+        Int id PK
+        String email UK
+        String password
+        String name
+        DateTime createdAt
+    }
 
-## 主要機能
+    Session {
+        String id PK
+        String name
+        Boolean isActive
+        Int ownerId FK
+        DateTime createdAt
+    }
 
-### 1. セッション管理
-- 会議セッションの作成・開始・終了
-- 参加者の登録とセッション紐付け
-- 同時10人以上の接続管理
+    Mood {
+        Int id PK
+        String sessionId FK
+        String nickname
+        String hashedNickname
+        Int score
+        String comment
+        String translatedComment
+        String language
+        String tag
+        String role
+        String department
+        String theme
+        String emoticon
+        DateTime createdAt
+    }
 
-### 2. リアルタイムデータ収集
-- スマホから感情スコア入力
-- タイムスタンプ自動付与
-- 非同期バッチ処理で高速保存
+    Transcript {
+        Int id PK
+        String sessionId FK
+        String text
+        String speaker
+        String tag
+        String language
+        DateTime createdAt
+    }
 
-### 3. AI分析機能
-- Gemini APIによる発言内容の感情分析
-- 意見のカテゴリ自動分類
-- ポジティブ/ネガティブ判定
+    Summary {
+        Int id PK
+        String sessionId FK
+        String content
+        DateTime startTime
+        DateTime endTime
+        DateTime createdAt
+    }
 
-### 4. 可視化機能
-- 個別参加者の心の変化グラフ
-- 全体の感情推移グラフ
-- 時間帯別の意見分布
-- 発言量と感情の相関
+    SurveyResponse {
+        Int id PK
+        String sessionId FK
+        String nickname
+        String hashedNickname
+        String role
+        String department
+        Int satisfaction
+        String positive
+        String improvement
+        DateTime createdAt
+    }
 
-### 5. レポート生成
-- 会議終了時の総合分析
-- 参加者ごとのインサイト
-- 重要な転換点の検出
+    Question {
+        Int id PK
+        String sessionId FK
+        String nickname
+        String hashedNickname
+        String text
+        String status
+        DateTime createdAt
+    }
 
-## パフォーマンス設計
+    QuestionVote {
+        Int id PK
+        Int questionId FK
+        String hashedNickname
+        DateTime createdAt
+    }
 
-### 同時実行対応
-- **想定**: 10〜30人の同時アクセス
-- **書き込み**: バッチ処理で負荷分散
-- **読み込み**: キャッシュサービス活用
-- **タイムアウト**: 6分以内の処理完了保証
+    Highlight {
+        Int id PK
+        String sessionId FK
+        String text
+        String tag
+        String sourceType
+        Int sourceId
+        DateTime createdAt
+    }
 
-### 最適化戦略
-1. **データベース**: スプレッドシートの行数制限対策
-2. **API制限**: Gemini API呼び出し回数の最適化
-3. **UI**: 軽量レスポンシブデザイン
-4. **キャッシュ**: CacheServiceでセッション情報管理
+    TagOverride {
+        Int id PK
+        String sessionId
+        String sourceType
+        Int sourceId
+        String tag
+        DateTime createdAt
+    }
 
-## セキュリティ
-- セッションIDベースの認証
-- ニックネームの匿名性保持
-- データの会議終了後の保持期間設定
-- 管理者権限の分離
+    InterventionLog {
+        Int id PK
+        String sessionId
+        String context
+        String dialogue
+        String suggestion
+        Int successRating
+        DateTime createdAt
+    }
+```
 
-## API エンドポイント
+### モデル一覧
 
-### 参加者用
-- `POST /api/session/join` - セッション参加
-- `POST /api/mood/submit` - 感情データ送信
-- `GET /api/session/status` - セッション状態取得
-
-### 管理者用
-- `POST /api/session/create` - セッション作成
-- `POST /api/session/end` - セッション終了
-- `GET /api/analysis/realtime` - リアルタイム分析
-- `GET /api/report/generate` - 最終レポート生成
-
-## 今後の拡張可能性
-- Slack/Teams連携
-- 音声入力対応
-- ビデオ会議ツール統合
-- 機械学習による予測機能
-- 多言語対応
+| モデル名 | 用途 | 主なフィールド |
+|---|---|---|
+| `User` | 管理者・主催者アカウント | `id`, `email`, `password`, `name` |
+| `Session` | 会議セッション管理 | `id` (UUID), `name`, `isActive`, `ownerId`, `createdAt` |
+| `Mood` | 参加者の感情リアクション・コメント | `sessionId`, `nickname`, `hashedNickname`, `score` (-5〜+5), `comment`, `translatedComment`, `tag`, `role`, `department`, `theme`, `emoticon` |
+| `Transcript` | リアルタイム音声文字起こし（5分要約後に自動削除） | `sessionId`, `text`, `speaker`, `tag`, `language` |
+| `Summary` | 5分ごとのAI自動要約 | `sessionId`, `content`, `startTime`, `endTime` |
+| `SurveyResponse` | セッション終了後アンケート回答 | `sessionId`, `satisfaction` (1〜5), `positive`, `improvement`, `role`, `department` |
+| `Question` | 参加者からの匿名質問・要望 | `sessionId`, `text`, `status` (`open` / `answered` / `archived`) |
+| `QuestionVote` | 質問への「いいね」投票 | `questionId`, `hashedNickname` |
+| `Highlight` | 重要発言・ハイライト記録 | `sessionId`, `text`, `tag`, `sourceType`, `sourceId` |
+| `TagOverride` | 自動付与タグの手動上書き履歴 | `sessionId`, `sourceType`, `sourceId`, `tag` |
+| `InterventionLog` | A2Aユーモア介入の対話・提案・効果評価ログ（RAG学習用） | `sessionId`, `context`, `dialogue`, `suggestion`, `successRating` (1〜5) |

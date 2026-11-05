@@ -1,432 +1,154 @@
-# 補佐やねん API 仕様書
+# 補佐やねん (MoodFlow) API 仕様書
 
-補佐やねんのバックエンドAPIの詳細仕様です。
+補佐やねん（MoodFlow）のバックエンド API（REST / Server-Sent Events / Socket.IO）の詳細仕様です。
 
-## 概要
+---
 
-補佐やねんは、Google Apps Script（GAS）で実装されたRESTful風APIを提供します。すべてのリクエストは `doPost()` 関数を通じて処理されます。
+## 1. セッション管理 API
 
-## エンドポイント
+### `GET /api/session?sessionId={id}`
+セッションの現在の状態（アクティブ状態、タイトル、開始時刻など）を取得します。
 
-ベースURL: デプロイ時に生成されるWebアプリのURL
+### `POST /api/session`
+セッションの作成・開始・終了を制御します。
 
-## 認証
-
-現在のバージョンでは、セッションIDベースの簡易認証を使用しています。
-
-## リクエスト形式
-
-すべてのリクエストはJSON形式で送信されます。
-
-```javascript
+```json
 {
-  "action": "アクション名",
-  "param1": "値1",
-  "param2": "値2"
+  "action": "start | end | create",
+  "sessionId": "session-123",
+  "name": "週次定例ミーティング"
 }
 ```
 
-## レスポンス形式
+### `GET / POST /api/my-sessions`
+ログイン中の管理者ユーザーが所有するセッション一覧の取得および新規セッション作成を行います。
 
-すべてのレスポンスはJSON形式で返されます。
+---
 
-### 成功時
-```javascript
-{
-  "success": true,
-  "data": { ... }
-}
-```
+## 2. リアルタイム反応・文字起こし・Q&A API
 
-### エラー時
-```javascript
-{
-  "success": false,
-  "error": "エラーメッセージ"
-}
-```
-
-## API一覧
-
-### セッション管理
-
-#### セッション作成
-新しい会議セッションを作成します。
+### `POST /api/submit-mood`
+参加者の感情スコア（`-5` 〜 `+5`）、絵文字、コメント、属性情報を送信します。
+コメントがある場合は Gemini API による自動翻訳とインサイト分類（`decision` / `concern` / `idea` / `other`）が行われ、強いネガティブ反応時は Webhook アラート判定（`lib/alerts.js`）が実行されます。
 
 **リクエスト**
-```javascript
+```json
 {
-  "action": "createSession",
-  "meetingTitle": "会議タイトル"
-}
-```
-
-**レスポンス**
-```javascript
-{
-  "success": true,
-  "sessionId": "uuid-xxxx-xxxx",
-  "meetingTitle": "会議タイトル",
-  "startTime": "2024-01-01T10:00:00.000Z",
-  "url": "https://script.google.com/..."
-}
-```
-
-#### セッション参加
-参加者がセッションに参加します。
-
-**リクエスト**
-```javascript
-{
-  "action": "joinSession",
-  "sessionId": "uuid-xxxx-xxxx",
+  "sessionId": "session-123",
   "nickname": "キリンさん",
-  "deviceInfo": "Mozilla/5.0..."
-}
-```
-
-**レスポンス**
-```javascript
-{
-  "success": true,
-  "participantId": "uuid-yyyy-yyyy",
-  "sessionId": "uuid-xxxx-xxxx",
-  "nickname": "キリンさん",
-  "joinTime": "2024-01-01T10:05:00.000Z"
-}
-```
-
-#### セッション終了
-会議セッションを終了します。
-
-**リクエスト**
-```javascript
-{
-  "action": "endSession",
-  "sessionId": "uuid-xxxx-xxxx"
-}
-```
-
-**レスポンス**
-```javascript
-{
-  "success": true,
-  "sessionId": "uuid-xxxx-xxxx",
-  "endTime": "2024-01-01T11:00:00.000Z"
-}
-```
-
-#### セッション状態取得
-セッションの現在の状態を取得します。
-
-**リクエスト**
-```javascript
-{
-  "action": "getSessionStatus",
-  "sessionId": "uuid-xxxx-xxxx"
-}
-```
-
-**レスポンス**
-```javascript
-{
-  "success": true,
-  "sessionId": "uuid-xxxx-xxxx",
-  "meetingTitle": "会議タイトル",
-  "startTime": "2024-01-01T10:00:00.000Z",
-  "endTime": null,
-  "status": "active",
-  "createdBy": "user@example.com"
-}
-```
-
-### データ送信
-
-#### ムードデータ送信
-参加者が感情スコアとコメントを送信します。
-
-**リクエスト**
-```javascript
-{
-  "action": "submitMood",
-  "sessionId": "uuid-xxxx-xxxx",
-  "participantId": "uuid-yyyy-yyyy",
   "moodScore": 3,
-  "comment": "いいアイデアだと思います！",
-  "emoticon": "😊"
+  "comment": "新しいUI案とても分かりやすいです！",
+  "emoticon": "😊",
+  "role": "engineer",
+  "department": "product",
+  "theme": "UI改善"
 }
 ```
 
-**パラメータ**
-- `moodScore`: -5〜+5の整数
-- `comment`: 文字列（オプション）
-- `emoticon`: 絵文字（オプション）
+### `POST /api/submit-transcript`
+文字起こしテキストをセッションに保存します。
 
-**レスポンス**
-```javascript
+```json
 {
-  "success": true,
-  "recordId": "uuid-zzzz-zzzz",
-  "timestamp": "2024-01-01T10:10:00.000Z"
+  "sessionId": "session-123",
+  "text": "それでは次のアジェンダに移ります。",
+  "speaker": "Presenter"
 }
 ```
 
-### 分析取得
+### `GET / POST / PUT /api/questions`
+匿名質問・要望の取得、新規投稿、投票（「いいね」）、ステータス変更（`open` / `answered` / `archived`）を行います。
 
-#### リアルタイム分析取得
-セッションのリアルタイム分析データを取得します。
+---
+
+## 3. A2A（Agent-to-Agent）ユーモア介入 API
+
+### `POST /api/humor-intervention`
+会議の文脈・文字起こしを分析し、方言判定（関西弁 / 標準語）に応じたエージェント選択、Google Custom Search によるプロの話術検索、過去の成功事例（RAG）を組み合わせたアドバイスと短い警告メッセージを生成します。
 
 **リクエスト**
-```javascript
+```json
 {
-  "action": "getRealTimeAnalysis",
-  "sessionId": "uuid-xxxx-xxxx"
+  "sessionId": "session-123",
+  "context": "えー、ほな次のスライドいきますわ。みなさんちょっと眠そうやなぁ..."
 }
 ```
 
 **レスポンス**
-```javascript
+```json
 {
   "success": true,
-  "timestamp": "2024-01-01T10:30:00.000Z",
-  "statistics": {
-    "count": 25,
-    "average": 2.4,
-    "max": 5,
-    "min": -2,
-    "positive": 18,
-    "negative": 5,
-    "neutral": 2,
-    "positiveRate": 72.0,
-    "negativeRate": 20.0
-  },
-  "timeIntervals": [
-    {
-      "startTime": "2024-01-01T10:00:00.000Z",
-      "endTime": "2024-01-01T10:05:00.000Z",
-      "avgMoodScore": 2.5,
-      "count": 5,
-      "comments": [...]
-    }
-  ],
-  "participantStats": [
-    {
-      "participantId": "uuid-yyyy-yyyy",
-      "nickname": "キリンさん",
-      "count": 5,
-      "average": 3.2,
-      "max": 5,
-      "min": 1,
-      "stdDev": 1.5,
-      "commentCount": 3,
-      "trend": "rising"
-    }
-  ],
-  "recentMoods": [...]
-}
-```
-
-#### 参加者個別分析取得
-特定参加者の分析データを取得します。
-
-**リクエスト**
-```javascript
-{
-  "action": "getParticipantAnalysis",
-  "sessionId": "uuid-xxxx-xxxx",
-  "participantId": "uuid-yyyy-yyyy"
-}
-```
-
-**レスポンス**
-```javascript
-{
-  "success": true,
-  "participantId": "uuid-yyyy-yyyy",
-  "statistics": {
-    "count": 5,
-    "average": 3.2,
-    "max": 5,
-    "min": 1,
-    "positive": 4,
-    "negative": 0,
-    "neutral": 1
-  },
-  "chartData": [
-    {
-      "time": "10:05",
-      "score": 3,
-      "comment": "いいですね"
-    }
-  ],
-  "moodData": [...],
-  "trend": "rising"
-}
-```
-
-### レポート生成
-
-#### 最終レポート生成
-会議終了時の総合レポートを生成します。
-
-**リクエスト**
-```javascript
-{
-  "action": "generateReport",
-  "sessionId": "uuid-xxxx-xxxx"
-}
-```
-
-**レスポンス**
-```javascript
-{
-  "success": true,
-  "report": {
-    "sessionInfo": {
-      "sessionId": "uuid-xxxx-xxxx",
-      "meetingTitle": "会議タイトル",
-      "startTime": "2024-01-01T10:00:00.000Z",
-      "endTime": "2024-01-01T11:00:00.000Z",
-      "duration": {
-        "totalMinutes": 60,
-        "hours": 1,
-        "minutes": 0,
-        "formatted": "1時間0分"
-      },
-      "participantCount": 10
-    },
-    "overallStatistics": {...},
-    "timelineData": [...],
-    "participantStats": [...],
-    "aiSummary": {
-      "overallMood": "全体的にポジティブで建設的な雰囲気",
-      "keyTopics": ["予算", "スケジュール", "リソース"],
-      "positivePoints": [...],
-      "concerns": [...],
-      "turningPoints": [...],
-      "recommendations": [...]
-    },
-    "turningPoints": [...],
-    "participantAnalyses": [...]
+  "interventionId": 12,
+  "data": {
+    "dialect": "kansai",
+    "agentUsed": "関西エージェント",
+    "advice": "ちょっと空気が重くなってるで！一回質問タイム挟んで場をほぐそか。",
+    "warning": "⚠️ 参加者の反応が薄いです。『ここまででツッコミどころある人〜？』と明るく振ってみましょう！"
   }
 }
 ```
 
-## データモデル
+### `POST /api/rate-intervention`
+提示された介入提案の効果を発表者が `1` 〜 `5` で評価します。`rating >= 4` の高評価データは次回以降の介入プロンプト（RAG）で自動的に参照されます。
 
-### Session（セッション）
-```typescript
+```json
 {
-  sessionId: string;        // UUID
-  meetingTitle: string;     // 会議タイトル
-  startTime: Date;          // 開始時刻
-  endTime: Date | null;     // 終了時刻
-  status: 'active' | 'completed';
-  createdBy: string;        // 作成者のメールアドレス
+  "interventionId": 12,
+  "rating": 5
 }
 ```
 
-### Participant（参加者）
-```typescript
-{
-  participantId: string;    // UUID
-  sessionId: string;        // セッションID
-  nickname: string;         // ニックネーム
-  joinTime: Date;           // 参加時刻
-  deviceInfo: string;       // デバイス情報
-}
-```
+---
 
-### MoodData（ムードデータ）
-```typescript
-{
-  recordId: string;         // UUID
-  sessionId: string;        // セッションID
-  participantId: string;    // 参加者ID
-  nickname: string;         // ニックネーム
-  timestamp: Date;          // タイムスタンプ
-  moodScore: number;        // -5〜+5
-  comment: string;          // コメント
-  emoticon: string;         // 絵文字
-}
-```
+## 4. 可視化・アンケート・AI統合分析 API
 
-## エラーコード
+### `GET /api/get-visual-data?sessionId={id}`
+ダッシュボード描画用のムード履歴、文字起こし、質問一覧、ハイライト、統計データを一括取得します。
 
-| エラーメッセージ | 説明 | 対処法 |
-|----------------|------|--------|
-| Session not found or not active | セッションが見つからないか、終了済み | 正しいセッションIDを使用 |
-| Participant not found | 参加者が見つからない | 先にjoinSessionを実行 |
-| GEMINI_API_KEY not set | Gemini APIキーが未設定 | スクリプトプロパティで設定 |
-| Gemini API error | Gemini API呼び出しエラー | APIキーの確認、クォータ確認 |
+### `GET /api/stream-visual-data?sessionId={id}`
+**Server-Sent Events (SSE)** により、セッションの最新データをリアルタイムストリーム配信します。
 
-## レート制限
+### `GET /api/get-summaries?sessionId={id}`
+5分ごとのバックグラウンドスケジューラ（`lib/scheduler.js`）によって生成された AI 自動要約の一覧を取得します。
 
-- GAS実行時間制限: 6分/実行
-- Gemini API: 無料枠の制限に準拠
-- スプレッドシート書き込み: バッチ処理で最適化済み
+### `POST /api/submit-survey` & `GET /api/get-survey?sessionId={id}`
+セッション終了後のアンケート回答（満足度 `1`〜`5`、良かった点、改善点）の送信および集計結果の取得を行います。
 
-## キャッシュ戦略
+### `POST /api/analyze-session`
+ムードデータ、5分要約、文字起こし、事後アンケートを統合し、Gemini API で時系列相関分析レポートを生成します。
 
-- セッション情報: 5分間キャッシュ
-- 参加者情報: 5分間キャッシュ
-- CacheService を使用
+**レスポンスに含まれる主な分析項目**
+- `overallMood`: 会議全体の雰囲気要約
+- `keyInsights`: 重要な気づきリスト
+- `positiveHighlights` / `concerns`: ムードが上がった話題・下がった話題の具体分析
+- `timelinedAdvice`: 時間帯別のムードトレンドと推奨アクション
+- `moodCorrelations`: 特定のトピック・発言内容とムード変動の相関
+- `executiveSummary`: 経営層向けサマリー
+- `facilitatorCues`: ファシリテーター向け介入ヒント
 
-## ベストプラクティス
+---
 
-1. **エラーハンドリング**
-   - すべてのレスポンスで `success` フィールドを確認
-   - エラー時は `error` フィールドのメッセージを表示
+## 5. コホート分析・比較・エクスポート・その他 API
 
-2. **パフォーマンス**
-   - 頻繁なポーリングを避ける
-   - リアルタイム分析は30秒〜1分間隔で取得推奨
+| メソッド & パス | 説明 |
+|---|---|
+| `GET /api/cohort-stats?sessionId={id}` | 部署（`department`）・役職（`role`）・テーマ（`theme`）別の平均スコア・件数統計 |
+| `GET /api/compare-sessions?sessions=id1,id2` | 複数セッション間の平均スコア・ポジティブ率・参加者数の比較 |
+| `GET / POST /api/highlights` | 重要発言やムードのハイライト登録・一覧取得 |
+| `POST /api/tag-override` | 自動分類されたタグ（`decision` / `concern` / `idea` / `other`）の手動変更 |
+| `GET /api/interventions?sessionId={id}` | 直近のムード傾向に基づくルールベースのファシリテーション提案取得 |
+| `GET /api/export?sessionId={id}&format=csv\|json` | セッションデータの CSV または JSON エクスポート |
+| `POST /api/generate-slides` | 分析結果から Google スライドのプレゼンテーションを自動生成 |
+| `GET /api/cron-generate-reports` | アクティブセッションの定期レポート生成バッチエンドポイント |
 
-3. **データ量**
-   - 長時間の会議では定期的にデータをエクスポート
-   - スプレッドシートの行数制限に注意（最大1000万セル）
+---
 
-## サンプルコード
+## 6. Socket.IO リアルタイム音声認識イベント (`local-server.js`)
 
-### クライアント側（参加者アプリ）
-
-```javascript
-// セッション参加
-function joinSession(sessionId, nickname) {
-  google.script.run
-    .withSuccessHandler(function(result) {
-      if (result.success) {
-        localStorage.setItem('participantId', result.participantId);
-        showInputScreen();
-      }
-    })
-    .doPost({
-      action: 'joinSession',
-      sessionId: sessionId,
-      nickname: nickname,
-      deviceInfo: navigator.userAgent
-    });
-}
-
-// ムード送信
-function submitMood(sessionId, participantId, score, comment) {
-  google.script.run
-    .withSuccessHandler(function(result) {
-      if (result.success) {
-        showSuccess('送信しました！');
-      }
-    })
-    .doPost({
-      action: 'submitMood',
-      sessionId: sessionId,
-      participantId: participantId,
-      moodScore: score,
-      comment: comment,
-      emoticon: getEmoticon(score)
-    });
-}
-```
-
-## 変更履歴
-
-- v1.0.0 (2024-01-01): 初版リリース
+| イベント名 | 方向 | ペイロード / 動作 |
+|---|---|---|
+| `start-stream` | Client → Server | Google Cloud Speech-to-Text ストリーミング認識（`WEBM_OPUS`, 48000Hz, `ja-JP`）を開始 |
+| `audio-data` | Client → Server | ブラウザの `MediaRecorder` から取得した音声バイナリチャンクを送信 |
+| `speech-result` | Server → Client | `{ transcript: string, isFinal: boolean }` 認識テキストをリアルタイム返却 |
+| `speech-error` | Server → Client | 音声認識エラーメッセージを通知 |
+| `end-stream` | Client → Server | 音声認識ストリームを終了 |
